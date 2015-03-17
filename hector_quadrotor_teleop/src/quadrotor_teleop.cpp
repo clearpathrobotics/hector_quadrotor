@@ -143,7 +143,6 @@ public:
 
     thrust_.thrust = getAxis(joy, axes_.z);
     thrust_publisher_.publish(thrust_);
-    ROS_INFO_STREAM(thrust_.thrust);
 
     yawrate_.turnrate = getAxis(joy, axes_.yaw);
     if (getButton(joy, buttons_.slow.button))
