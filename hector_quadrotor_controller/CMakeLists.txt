@@ -36,7 +36,7 @@ catkin_package(
 ## Build ##
 ###########
 
-add_library(hector_quadrotor_controller src/quadrotor_interface.cpp src/pid.cpp)
+add_library(hector_quadrotor_controller src/quadrotor_interface.cpp src/pid.cpp include/hector_quadrotor_controller/helpers.h include/hector_quadrotor_controller/limiters.h)
 target_link_libraries(hector_quadrotor_controller ${catkin_LIBRARIES})
 add_dependencies(hector_quadrotor_controller hector_uav_msgs_generate_messages_cpp)
 

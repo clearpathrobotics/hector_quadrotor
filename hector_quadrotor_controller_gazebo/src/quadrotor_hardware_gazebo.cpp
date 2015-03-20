@@ -36,8 +36,8 @@ QuadrotorHardwareSim::QuadrotorHardwareSim()
 {
   this->registerInterface(static_cast<QuadrotorInterface *>(this));
 
-  wrench_output_ = addInput<WrenchCommandHandle>("wrench");
-  motor_output_ = addInput<MotorCommandHandle>("motor");
+  wrench_input_ = addInput<WrenchCommandHandle>("wrench");
+  motor_input_ = addInput<MotorCommandHandle>("motor");
 }
 
 QuadrotorHardwareSim::~QuadrotorHardwareSim()
@@ -52,7 +52,8 @@ bool QuadrotorHardwareSim::initSim(
     const urdf::Model *const urdf_model,
     std::vector<transmission_interface::TransmissionInfo> transmissions)
 {
-  ros::NodeHandle param_nh(model_nh, "controller");
+  ros::NodeHandle controller_nh(model_nh, "controller");
+  ros::NodeHandle limits_nh(model_nh, "limits");
 
   // store parent model pointer
   model_ = parent_model;
@@ -64,44 +65,30 @@ bool QuadrotorHardwareSim::initSim(
 
   // subscribe state
   std::string state_topic;
-  param_nh.getParam("state_topic", state_topic);
+  controller_nh.getParam("state_topic", state_topic);
   if (!state_topic.empty()) {
-    ros::SubscribeOptions ops = ros::SubscribeOptions::create<nav_msgs::Odometry>(state_topic, 1, boost::bind(&QuadrotorHardwareSim::stateCallback, this, _1), ros::VoidConstPtr(), &callback_queue_);
-    subscriber_state_ = model_nh.subscribe(ops);
-
-    gzlog << "[hector_quadrotor_controller_gazebo] Using topic '" << subscriber_state_.getTopic() << "' as state input for control" << std::endl;
+    odom_sub_helper_.reset(new OdomSubscriberHelper(model_nh, state_topic, pose_, twist_, acceleration_ ,header_));
+    gzlog << "[hector_quadrotor_controller_gazebo] Using topic '" << state_topic << "' as state input for control" << std::endl;
   } else {
     gzlog << "[hector_quadrotor_controller_gazebo] Using ground truth from Gazebo as state input for control" << std::endl;
   }
 
   // subscribe imu
   std::string imu_topic;
-  param_nh.getParam("imu_topic", imu_topic);
+  controller_nh.getParam("imu_topic", imu_topic);
   if (!imu_topic.empty()) {
-    ros::SubscribeOptions ops = ros::SubscribeOptions::create<sensor_msgs::Imu>(imu_topic, 1, boost::bind(&QuadrotorHardwareSim::imuCallback, this, _1), ros::VoidConstPtr(), &callback_queue_);
-    subscriber_imu_ = model_nh.subscribe(ops);
-    gzlog << "[hector_quadrotor_controller_gazebo] Using topic '" << subscriber_imu_.getTopic() << "' as imu input for control" << std::endl;
+    imu_sub_helper_.reset(new ImuSubscriberHelper(model_nh, imu_topic, imu_));
+    gzlog << "[hector_quadrotor_controller_gazebo] Using topic '" <<imu_topic << "' as imu input for control" << std::endl;
   } else {
     gzlog << "[hector_quadrotor_controller_gazebo] Using ground truth from Gazebo as imu input for control" << std::endl;
   }
 
+  wrench_limiter_.reset(new WrenchLimiter(limits_nh, "wrench"));
+
   // subscribe motor_status
-  {
-    ros::SubscribeOptions ops = ros::SubscribeOptions::create<hector_uav_msgs::MotorStatus>("motor_status", 1, boost::bind(&QuadrotorHardwareSim::motorStatusCallback, this, _1), ros::VoidConstPtr(), &callback_queue_);
-    subscriber_motor_status_ = model_nh.subscribe(ops);
-  }
-
-  // publish wrench
-  {
-    ros::AdvertiseOptions ops = ros::AdvertiseOptions::create<geometry_msgs::WrenchStamped>("command/wrench", 1, ros::SubscriberStatusCallback(), ros::SubscriberStatusCallback(), ros::VoidConstPtr(), &callback_queue_);
-    publisher_wrench_command_ = model_nh.advertise(ops);
-  }
-
-  // publish motor command
-  {
-    ros::AdvertiseOptions ops = ros::AdvertiseOptions::create<hector_uav_msgs::MotorCommand>("command/motor", 1, ros::SubscriberStatusCallback(), ros::SubscriberStatusCallback(), ros::VoidConstPtr(), &callback_queue_);
-    publisher_motor_command_ = model_nh.advertise(ops);
-  }
+  subscriber_motor_status_ = model_nh.subscribe<hector_uav_msgs::MotorStatus>("motor_status", 1, boost::bind(&QuadrotorHardwareSim::motorStatusCallback, this, _1));
+  publisher_wrench_command_ = model_nh.advertise<geometry_msgs::WrenchStamped>("command/wrench", 1);
+  publisher_motor_command_ = model_nh.advertise<hector_uav_msgs::MotorCommand>("command/motor", 1);
 
   return true;
 }
@@ -116,48 +103,20 @@ bool QuadrotorHardwareSim::getMassAndInertia(double &mass, double inertia[3]) {
   return true;
 }
 
-void QuadrotorHardwareSim::stateCallback(const nav_msgs::OdometryConstPtr &state) {
-  // calculate acceleration
-  if (!header_.stamp.isZero() && !state->header.stamp.isZero()) {
-    const double acceleration_time_constant = 0.1;
-    double dt((state->header.stamp - header_.stamp).toSec());
-    if (dt > 0.0) {
-      acceleration_.linear.x = ((state->twist.twist.linear.x - twist_.linear.x) + acceleration_time_constant * acceleration_.linear.x) / (dt + acceleration_time_constant);
-      acceleration_.linear.y = ((state->twist.twist.linear.y - twist_.linear.y) + acceleration_time_constant * acceleration_.linear.y) / (dt + acceleration_time_constant);
-      acceleration_.linear.z = ((state->twist.twist.linear.z - twist_.linear.z) + acceleration_time_constant * acceleration_.linear.z) / (dt + acceleration_time_constant);
-      acceleration_.angular.x = ((state->twist.twist.angular.x - twist_.angular.x) + acceleration_time_constant * acceleration_.angular.x) / (dt + acceleration_time_constant);
-      acceleration_.angular.y = ((state->twist.twist.angular.y - twist_.angular.y) + acceleration_time_constant * acceleration_.angular.y) / (dt + acceleration_time_constant);
-      acceleration_.angular.z = ((state->twist.twist.angular.z - twist_.angular.z) + acceleration_time_constant * acceleration_.angular.z) / (dt + acceleration_time_constant);
-    }
-  }
-
-  header_ = state->header;
-  pose_ = state->pose.pose;
-  twist_ = state->twist.twist;
-}
-
-void QuadrotorHardwareSim::imuCallback(const sensor_msgs::ImuConstPtr &imu) {
-  imu_ = *imu;
-}
-
 void QuadrotorHardwareSim::motorStatusCallback(const hector_uav_msgs::MotorStatusConstPtr &motor_status) {
   motor_status_ = *motor_status;
 }
 
 void QuadrotorHardwareSim::readSim(ros::Time time, ros::Duration period)
 {
-  // call all available subscriber callbacks now
-  callback_queue_.callAvailable();
-
   // read state from Gazebo
-  gz_pose_             =  link_->GetWorldPose();
-  gz_acceleration_     = link_->GetWorldLinearAccel();
-  gz_angular_acceleration_ = link_->GetWorldAngularAccel();
-  gz_velocity_         =  link_->GetWorldLinearVel();
-  gz_angular_velocity_ =  link_->GetWorldAngularVel();
+  gz_pose_                  =  link_->GetWorldPose();
+  gz_acceleration_          = link_->GetWorldLinearAccel();
+  gz_angular_acceleration_  = link_->GetWorldAngularAccel();
+  gz_velocity_              =  link_->GetWorldLinearVel();
+  gz_angular_velocity_      =  link_->GetWorldAngularVel();
 
-
-  if (!subscriber_state_) {
+  if (!odom_sub_helper_) {
     header_.frame_id = world_frame_;
     header_.stamp = time;
     pose_.position.x = gz_pose_.pos.x;
@@ -179,10 +138,9 @@ void QuadrotorHardwareSim::readSim(ros::Time time, ros::Duration period)
     acceleration_.angular.x = gz_angular_acceleration_.x;
     acceleration_.angular.y = gz_angular_acceleration_.y;
     acceleration_.angular.z = gz_angular_acceleration_.z;
-
   }
 
-  if (!subscriber_imu_) {
+  if (!imu_sub_helper_) {
     imu_.orientation.w = gz_pose_.rot.w;
     imu_.orientation.x = gz_pose_.rot.x;
     imu_.orientation.y = gz_pose_.rot.y;
@@ -202,21 +160,22 @@ void QuadrotorHardwareSim::readSim(ros::Time time, ros::Duration period)
 
 void QuadrotorHardwareSim::writeSim(ros::Time time, ros::Duration period)
 {
-  bool result_written = false;
+  bool write_to_motors = false;
 
-  if (motor_output_->connected() && motor_output_->enabled()) {
-    publisher_motor_command_.publish(motor_output_->getCommand());
-    result_written = true;
+  if (motor_input_->connected() && motor_input_->enabled()) {
+    publisher_motor_command_.publish(motor_input_->getCommand());
+    write_to_motors = true;
   }
 
-  if (wrench_output_->connected() && wrench_output_->enabled()) {
+  if (wrench_input_->connected() && wrench_input_->enabled()) {
     geometry_msgs::WrenchStamped wrench;
     wrench.header.stamp = time;
     wrench.header.frame_id = base_link_frame_;
-    wrench.wrench = wrench_output_->getCommand();
+    wrench.wrench = wrench_limiter_->limit(wrench_input_->getCommand());
+
     publisher_wrench_command_.publish(wrench);
 
-    if (!result_written) {
+    if (!write_to_motors) {
       gazebo::math::Vector3 force(wrench.wrench.force.x, wrench.wrench.force.y, wrench.wrench.force.z);
       gazebo::math::Vector3 torque(wrench.wrench.torque.x, wrench.wrench.torque.y, wrench.wrench.torque.z);
       link_->AddRelativeForce(force);

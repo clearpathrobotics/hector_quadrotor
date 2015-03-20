@@ -31,13 +31,14 @@
 
 #include <gazebo_ros_control/robot_hw_sim.h>
 #include <hector_quadrotor_controller/quadrotor_interface.h>
+#include <hector_quadrotor_controller/helpers.h>
 
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <hector_uav_msgs/MotorStatus.h>
 
 #include <ros/node_handle.h>
-#include <ros/callback_queue.h>
+#include <hector_quadrotor_controller/limiters.h>
 
 namespace hector_quadrotor_controller_gazebo {
 
@@ -73,20 +74,20 @@ public:
   virtual void writeSim(ros::Time time, ros::Duration period);
 
 private:
-  void stateCallback(const nav_msgs::OdometryConstPtr &state);
-  void imuCallback(const sensor_msgs::ImuConstPtr &imu);
   void motorStatusCallback(const hector_uav_msgs::MotorStatusConstPtr &motor_status);
 
 protected:
   std_msgs::Header header_;
-  Pose pose_;
-  Twist twist_, acceleration_;
-  Imu imu_;
+  geometry_msgs::Pose pose_;
+  geometry_msgs::Twist twist_, acceleration_;
+  sensor_msgs::Imu imu_;
   MotorStatus motor_status_;
-  std::string base_link_frame_, world_frame_;
 
-  WrenchCommandHandlePtr wrench_output_;
-  MotorCommandHandlePtr motor_output_;
+  WrenchCommandHandlePtr wrench_input_;
+  MotorCommandHandlePtr motor_input_;
+
+  boost::shared_ptr<hector_quadrotor_controller::WrenchLimiter> wrench_limiter_;
+  std::string base_link_frame_, world_frame_;
 
   gazebo::physics::ModelPtr model_;
   gazebo::physics::LinkPtr link_;
@@ -95,9 +96,9 @@ protected:
   gazebo::math::Pose gz_pose_;
   gazebo::math::Vector3 gz_velocity_, gz_acceleration_, gz_angular_velocity_, gz_angular_acceleration_;
 
-  ros::CallbackQueue callback_queue_;
-  ros::Subscriber subscriber_state_;
-  ros::Subscriber subscriber_imu_;
+  boost::shared_ptr<hector_quadrotor_controller::ImuSubscriberHelper> imu_sub_helper_;
+  boost::shared_ptr<hector_quadrotor_controller::OdomSubscriberHelper> odom_sub_helper_;
+
   ros::Subscriber subscriber_motor_status_;
   ros::Publisher publisher_wrench_command_;
   ros::Publisher publisher_motor_command_;

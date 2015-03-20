@@ -43,8 +43,31 @@ controller:
             time_constant: 0.1
         limits:
             load_factor: 1.5
-            force/z: 30.0
-            torque/xy: 10.0
-            torque/z: 1.0
     motor:
         type: hector_quadrotor_controller/MotorController
+limits:
+    pose:
+        position:
+            z:
+                min: 0.0
+        orientation:
+            x:
+                max: 0.35
+            y:
+                max: 0.35
+    twist:
+        angular:
+            z:
+                max: 2.094
+    wrench:
+        force:
+            z:
+                min: 0.0
+                max: 30.0
+        torque:
+            x:
+                max: 10.0
+            y:
+                max: 10.0
+            z:
+                max: 1.0
