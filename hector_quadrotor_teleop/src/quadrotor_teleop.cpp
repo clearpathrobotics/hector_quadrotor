@@ -53,6 +53,7 @@ private:
   {
     int axis;
     double max;
+    double min;
   };
 
   struct Button
@@ -86,6 +87,9 @@ public:
     params.param<int>("yaw_axis", axes_.yaw.axis, 1);
 
     params.param<double>("yaw_velocity_max", axes_.yaw.max, 90.0 * M_PI / 180.0);
+    params.param<double>("yaw_velocity_min", axes_.yaw.min
+        , -axes_.yaw.max);
+
     params.param<int>("slow_button", buttons_.slow.button, 1);
     params.param<double>("slow_factor", slow_factor_, 0.2);
 
@@ -97,6 +101,9 @@ public:
       params.param<double>("x_velocity_max", axes_.x.max, 2.0);
       params.param<double>("y_velocity_max", axes_.y.max, 2.0);
       params.param<double>("z_velocity_max", axes_.z.max, 2.0);
+      params.param<double>("x_velocity_min", axes_.x.min, -axes_.x.max);
+      params.param<double>("y_velocity_min", axes_.y.min, -axes_.y.max);
+      params.param<double>("z_velocity_min", axes_.z.min, -axes_.z.max);
 
       joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1, boost::bind(&Teleop::joyTwistCallback, this, _1));
       velocity_publisher_ = node_handle_.advertise<geometry_msgs::Twist>("cmd_vel", 10);
@@ -106,6 +113,10 @@ public:
       params.param<double>("x_roll_max", axes_.x.max, 0.35);
       params.param<double>("y_pitch_max", axes_.y.max, 0.35);
       params.param<double>("z_thrust_max", axes_.z.max, 25.0);
+      params.param<double>("x_roll_min", axes_.x.min, -axes_.x.max);
+      params.param<double>("y_pitch_min", axes_.y.min, -axes_.y.max);
+      params.param<double>("z_thrust_min", axes_.z.min, -axes_.z.max);
+
       joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1, boost::bind(&Teleop::joyAttitudeCallback, this, _1));
       attitude_publisher_ = node_handle_.advertise<hector_uav_msgs::AttitudeCommand>("command/attitude", 10);
       yawrate_publisher_ = node_handle_.advertise<hector_uav_msgs::YawrateCommand>("command/yawrate", 10);
@@ -125,7 +136,7 @@ public:
     velocity_.linear.y = getAxis(joy, axes_.y);
     velocity_.linear.z = getAxis(joy, axes_.z);
     velocity_.angular.z = getAxis(joy, axes_.yaw);
-    if (getButton(joy, buttons_.slow.button))
+    if (getButton(joy, buttons_.slow))
     {
       velocity_.linear.x *= slow_factor_;
       velocity_.linear.y *= slow_factor_;
@@ -145,35 +156,37 @@ public:
     thrust_publisher_.publish(thrust_);
 
     yawrate_.turnrate = getAxis(joy, axes_.yaw);
-    if (getButton(joy, buttons_.slow.button))
+    if (getButton(joy, buttons_.slow))
     {
       yawrate_.turnrate *= slow_factor_;
     }
     yawrate_publisher_.publish(yawrate_);
   }
 
-  sensor_msgs::Joy::_axes_type::value_type getAxis(const sensor_msgs::JoyConstPtr &joy, Axis axis)
+  double getAxis(const sensor_msgs::JoyConstPtr &joy, Axis axis)
   {
-    if (axis.axis == 0)
-    {return 0;}
-    sensor_msgs::Joy::_axes_type::value_type sign = 1.0;
-    if (axis.axis < 0)
+    if (axis.axis == 0 || std::abs(axis.axis) > joy->axes.size())
     {
-      sign = -1.0;
-      axis.axis = -axis.axis;
+      return 0;
+      ROS_ERROR_STREAM("Axis " << axis.axis << " out of range, joy has " << joy->axes.size() << " axes");
     }
-    if ((size_t) axis.axis > joy->axes.size())
-    {return 0;}
-    return sign * joy->axes[axis.axis - 1] * axis.max;
+
+    double output = std::abs(axis.axis) / axis.axis * joy->axes[std::abs(axis.axis)-1];
+
+    // Scale axis with min/max
+    return (output + 1) * (axis.max - axis.min) / 2 + axis.min;
+
+
   }
 
-  sensor_msgs::Joy::_buttons_type::value_type getButton(const sensor_msgs::JoyConstPtr &joy, int button)
+  bool getButton(const sensor_msgs::JoyConstPtr &joy, Button button)
   {
-    if (button <= 0)
-    {return 0;}
-    if ((size_t) button > joy->axes.size())
-    {return 0;}
-    return joy->buttons[button - 1];
+    if (button.button <= 0 || button.button > joy->buttons.size())
+    {
+      ROS_ERROR_STREAM("Button " << button.button << " out of range, joy has " << joy->buttons.size() << " buttons");
+      return false;
+    }
+    return joy->buttons[button.button - 1] > 0;
   }
 
   void stop()
