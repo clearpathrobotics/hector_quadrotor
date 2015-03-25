@@ -28,6 +28,7 @@
 
 #include <hector_quadrotor_controller/pid.h>
 #include <limits>
+#include <ros/ros.h>
 
 namespace hector_quadrotor_controller {
 
@@ -83,6 +84,19 @@ template <typename T> static inline T& checknan(T& value)
   if (std::isnan(value)) value = T();
   return value;
 }
+
+
+
+double PID::updateDebug(double input, double x, double dx, const ros::Duration& dt)
+{
+
+  double val = update(input,x,dx,dt);
+  ROS_INFO("input %+4.2f x %+4.2f dx %+4.2f out %+4.2f", input, x, dx, val);
+  return val;
+
+}
+
+
 
 double PID::update(double input, double x, double dx, const ros::Duration& dt)
 {

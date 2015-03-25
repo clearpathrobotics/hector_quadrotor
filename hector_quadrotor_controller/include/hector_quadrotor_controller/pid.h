@@ -34,6 +34,7 @@ public:
   void init(const ros::NodeHandle &param_nh);
   void reset();
 
+  double updateDebug(double input, double x, double dx, const ros::Duration& dt);
   double update(double input, double x, double dx, const ros::Duration& dt);
   double update(double error, double dx, const ros::Duration& dt);
 
