@@ -141,7 +141,7 @@ public:
 
   virtual bool connected() const { return PoseHandle::connected() && TwistHandle::connected(); }
 };
-typedef boost::shared_ptr<PoseHandle> PoseHandlePtr;
+typedef boost::shared_ptr<StateHandle> StateHandlePtr;
 
 class ImuHandle : public Handle_<ImuHandle, Imu>
 {
