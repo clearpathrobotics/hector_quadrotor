@@ -74,6 +74,7 @@ private:
     Button slow;
   } buttons_;
 
+  std::string robot_namespace_;
   double slow_factor_;
 
 public:
@@ -95,6 +96,8 @@ public:
 
     std::string control_mode_str;
     params.param<std::string>("control_mode", control_mode_str, "twist");
+    params.param<std::string>("robot_namespace", robot_namespace_, "");
+    if(!robot_namespace_.empty()) robot_namespace_ = robot_namespace_ + "/";
 
     if (control_mode_str == "twist")
     {
@@ -106,7 +109,7 @@ public:
       params.param<double>("z_velocity_min", axes_.z.min, -axes_.z.max);
 
       joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1, boost::bind(&Teleop::joyTwistCallback, this, _1));
-      velocity_publisher_ = node_handle_.advertise<geometry_msgs::Twist>("cmd_vel", 10);
+      velocity_publisher_ = node_handle_.advertise<geometry_msgs::Twist>(robot_namespace_ + "cmd_vel", 10);
     }
     else if (control_mode_str == "attitude")
     {
@@ -118,9 +121,9 @@ public:
       params.param<double>("z_thrust_min", axes_.z.min, -axes_.z.max);
 
       joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1, boost::bind(&Teleop::joyAttitudeCallback, this, _1));
-      attitude_publisher_ = node_handle_.advertise<hector_uav_msgs::AttitudeCommand>("command/attitude", 10);
-      yawrate_publisher_ = node_handle_.advertise<hector_uav_msgs::YawrateCommand>("command/yawrate", 10);
-      thrust_publisher_ = node_handle_.advertise<hector_uav_msgs::ThrustCommand>("command/thrust", 10);
+      attitude_publisher_ = node_handle_.advertise<hector_uav_msgs::AttitudeCommand>(robot_namespace_ + "command/attitude", 10);
+      yawrate_publisher_ = node_handle_.advertise<hector_uav_msgs::YawrateCommand>(robot_namespace_ + "command/yawrate", 10);
+      thrust_publisher_ = node_handle_.advertise<hector_uav_msgs::ThrustCommand>(robot_namespace_ + "command/thrust", 10);
     }
 
   }
