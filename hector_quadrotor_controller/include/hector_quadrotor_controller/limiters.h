@@ -5,6 +5,7 @@
 #include <limits>
 #include "geometry_msgs/Wrench.h"
 #include "geometry_msgs/Vector3.h"
+#include "geometry_msgs/Twist.h"
 #include "hector_uav_msgs/AttitudeCommand.h"
 #include "hector_uav_msgs/ThrustCommand.h"
 #include "hector_uav_msgs/YawrateCommand.h"
@@ -56,6 +57,23 @@ namespace hector_quadrotor_controller
     FieldLimiter<double> x_, y_, z_;
   };
 
+
+  class TwistLimiter{
+
+  public:
+    TwistLimiter(ros::NodeHandle nh, std::string field)
+        : linear_(ros::NodeHandle(nh, field), "linear"), angular_(ros::NodeHandle(nh, field), "angular") {}
+
+    Twist limit(const Twist &input){
+      Twist output;
+      output.linear = linear_.limit(input.linear);
+      output.angular = angular_.limit(input.angular);
+      return output;
+    }
+
+  private:
+    Vector3Limiter linear_, angular_;
+  };
 
   class WrenchLimiter{
 
