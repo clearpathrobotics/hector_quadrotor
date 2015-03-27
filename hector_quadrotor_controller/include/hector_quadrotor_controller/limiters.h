@@ -16,10 +16,9 @@ namespace hector_quadrotor_controller
   using namespace geometry_msgs;
   using namespace hector_uav_msgs;
 
-  template <typename T>
+  template<typename T>
   class FieldLimiter
   {
-
   public:
     FieldLimiter(ros::NodeHandle nh, std::string field)
     {
@@ -28,23 +27,28 @@ namespace hector_quadrotor_controller
       ROS_INFO_STREAM("nh " << nh.getNamespace() + "/" + field << " inited " << field << " with min " << min_ << " and max " << max_);
     }
 
-    T limit(const T &value){
+    T limit(const T &value)
+    {
       return std::max(min_, std::min(max_, value));
     }
 
-  private:
-    FieldLimiter(){};
+    FieldLimiter()
+    {
+    };
     T min_, max_;
 
   };
 
-  class Vector3Limiter{
-
+  class Vector3Limiter
+  {
   public:
     Vector3Limiter(ros::NodeHandle nh, std::string field)
-    : nh_(ros::NodeHandle(nh, field)), x_(nh_, "x"), y_(nh_, "y"), z_(nh_, "z") {}
+        : nh_(ros::NodeHandle(nh, field)), x_(nh_, "x"), y_(nh_, "y"), z_(nh_, "z")
+    {
+    }
 
-    Vector3 limit(const Vector3 &input){
+    Vector3 limit(const Vector3 &input)
+    {
       Vector3 output;
       output.x = x_.limit(input.x);
       output.y = y_.limit(input.y);
@@ -52,92 +56,102 @@ namespace hector_quadrotor_controller
       return output;
     }
 
-  private:
     ros::NodeHandle nh_;
     FieldLimiter<double> x_, y_, z_;
   };
 
 
-  class TwistLimiter{
-
+  class TwistLimiter
+  {
   public:
     TwistLimiter(ros::NodeHandle nh, std::string field)
-        : linear_(ros::NodeHandle(nh, field), "linear"), angular_(ros::NodeHandle(nh, field), "angular") {}
+        : linear_(ros::NodeHandle(nh, field), "linear"), angular_(ros::NodeHandle(nh, field), "angular")
+    {
+    }
 
-    Twist limit(const Twist &input){
+    Twist limit(const Twist &input)
+    {
       Twist output;
       output.linear = linear_.limit(input.linear);
       output.angular = angular_.limit(input.angular);
       return output;
     }
 
-  private:
     Vector3Limiter linear_, angular_;
   };
 
-  class WrenchLimiter{
-
+  class WrenchLimiter
+  {
   public:
     WrenchLimiter(ros::NodeHandle nh, std::string field)
-        : force_(ros::NodeHandle(nh, field), "force"), torque_(ros::NodeHandle(nh, field), "torque") {}
+        : force_(ros::NodeHandle(nh, field), "force"), torque_(ros::NodeHandle(nh, field), "torque")
+    {
+    }
 
-    Wrench limit(const Wrench &input){
+    Wrench limit(const Wrench &input)
+    {
       Wrench output;
       output.force = force_.limit(input.force);
       output.torque = torque_.limit(input.torque);
       return output;
     }
 
-  private:
     Vector3Limiter force_, torque_;
   };
 
-  class AttitudeCommandLimiter{
-
+  class AttitudeCommandLimiter
+  {
   public:
     AttitudeCommandLimiter(ros::NodeHandle nh, std::string field)
-        : roll_(ros::NodeHandle(nh, field), "x"), pitch_(ros::NodeHandle(nh, field), "y") {}
+        : roll_(ros::NodeHandle(nh, field), "x"), pitch_(ros::NodeHandle(nh, field), "y")
+    {
+    }
 
-    AttitudeCommand limit(const AttitudeCommand &input){
+    AttitudeCommand limit(const AttitudeCommand &input)
+    {
       AttitudeCommand output;
       output.roll = roll_.limit(input.roll);
       output.pitch = pitch_.limit(input.pitch);
       return output;
     }
 
-  private:
     FieldLimiter<double> roll_, pitch_;
   };
 
-  class YawrateCommandLimiter{
+  class YawrateCommandLimiter
+  {
 
   public:
     YawrateCommandLimiter(ros::NodeHandle nh, std::string field)
-        : turnrate_(ros::NodeHandle(nh, field), "z") {}
+        : turnrate_(ros::NodeHandle(nh, field), "z")
+    {
+    }
 
-    YawrateCommand limit(const YawrateCommand &input){
+    YawrateCommand limit(const YawrateCommand &input)
+    {
       YawrateCommand output;
       output.turnrate = turnrate_.limit(input.turnrate);
       return output;
     }
 
-  private:
     FieldLimiter<double> turnrate_;
   };
 
-  class ThrustCommandLimiter{
-
+  class ThrustCommandLimiter
+  {
   public:
     ThrustCommandLimiter(ros::NodeHandle nh, std::string field)
-        : thrust_(ros::NodeHandle(nh, field), "z") {}
+        : thrust_(ros::NodeHandle(nh, field), "z")
+    {
+    }
 
-    ThrustCommand limit(const ThrustCommand &input){
+    ThrustCommand limit(const ThrustCommand &input)
+    {
       ThrustCommand output;
       output.thrust = thrust_.limit(input.thrust);
       return output;
     }
 
-  private:
     FieldLimiter<double> thrust_;
   };
 
