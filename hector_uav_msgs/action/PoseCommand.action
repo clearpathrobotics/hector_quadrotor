@@ -1,0 +1,6 @@
+geometry_msgs/PoseStamped target_pose
+float64 dist_tolerance
+float64 yaw_tolerance
+---
+---
+geometry_msgs/PoseStamped current_pose
