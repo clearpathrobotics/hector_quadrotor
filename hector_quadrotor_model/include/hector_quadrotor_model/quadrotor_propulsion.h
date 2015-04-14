@@ -90,7 +90,7 @@ private:
 
   boost::mutex mutex_;
 
-  class PropulsionModel;
+  struct PropulsionModel;
   PropulsionModel *propulsion_model_;
 };
 
