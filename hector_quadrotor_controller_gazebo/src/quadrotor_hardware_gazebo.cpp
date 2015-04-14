@@ -41,8 +41,7 @@ namespace hector_quadrotor_controller_gazebo
   }
 
   QuadrotorHardwareSim::~QuadrotorHardwareSim()
-  {//    wrench_input_ = addInput<WrenchCommandHandle>("wrench");
-//    motor_input_ = addInput<MotorCommandHandle>("motor");
+  {
 
   }
 
@@ -94,13 +93,13 @@ namespace hector_quadrotor_controller_gazebo
       std::endl;
     }
 
+    // TODO add motor on/off service and publisher
     motor_status_.on = true;
     motor_status_.running = true;
 
     wrench_limiter_.reset(new WrenchLimiter(limits_nh, "wrench"));
 
-    double temp;
-    getMassAndInertia(temp, inertia_);
+    getMassAndInertia(mass_, inertia_);
 
     wrench_pub_ = model_nh.advertise<geometry_msgs::WrenchStamped>("command/wrench", 1);
 
@@ -181,6 +180,8 @@ namespace hector_quadrotor_controller_gazebo
       imu_.linear_acceleration.z = gz_linear_acceleration_body.z;
     }
 
+    motor_status_pub_.publish(motor_status_);
+
   }
 
   void QuadrotorHardwareSim::writeSim(ros::Time time, ros::Duration period)
@@ -196,9 +197,9 @@ namespace hector_quadrotor_controller_gazebo
       wrench.wrench.torque.x = accel_input_->getCommand().angular.x * inertia_[0];
       wrench.wrench.torque.y = accel_input_->getCommand().angular.y * inertia_[1];
       wrench.wrench.torque.z = accel_input_->getCommand().angular.z * inertia_[2];
-      wrench.wrench.force.z = accel_input_->getCommand().linear.z;
+      wrench.wrench.force.z = accel_input_->getCommand().linear.z * mass_;
 
-//      wrench.wrench = wrench_limiter_->limit(wrench.wrench);
+      wrench.wrench = wrench_limiter_->limit(wrench.wrench);
 
       wrench_pub_.publish(wrench);
 
