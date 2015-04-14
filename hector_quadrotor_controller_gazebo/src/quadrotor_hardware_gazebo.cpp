@@ -94,6 +94,9 @@ namespace hector_quadrotor_controller_gazebo
     }
 
     // TODO add motor on/off service and publisher
+    motor_status_pub_ = model_nh.advertise<hector_uav_msgs::MotorStatus>("motor_status", 1);
+    motor_status_service_helper_.reset(
+        new EnableMotorsServiceHelper(model_nh, boost::bind(&QuadrotorHardwareSim::enableMotors, this, _1)));
     motor_status_.on = true;
     motor_status_.running = true;
 
@@ -210,6 +213,11 @@ namespace hector_quadrotor_controller_gazebo
     }
   }
 
+  bool QuadrotorHardwareSim::enableMotors(bool enabled)
+  {
+    motor_status_.on = motor_status_.running = enabled;
+    return true;
+  }
 } // namespace hector_quadrotor_controller_gazebo
 
 #include <pluginlib/class_list_macros.h>

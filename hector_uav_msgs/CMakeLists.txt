@@ -45,12 +45,11 @@ add_message_files(
   YawrateCommand.msg
 )
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+# Generate services in the 'srv' folder
+add_service_files(
+ FILES
+ EnableMotors.srv
+)
 
 add_action_files(
   DIRECTORY

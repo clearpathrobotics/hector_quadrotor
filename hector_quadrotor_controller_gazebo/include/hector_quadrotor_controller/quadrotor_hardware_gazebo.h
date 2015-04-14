@@ -62,6 +62,9 @@ public:
 
   virtual bool getMassAndInertia(double &mass, double inertia[3]);
 
+  // TODO add to quadrotor_interface
+  bool enableMotors(bool enabled);
+
   virtual bool initSim(
       const std::string& robot_namespace,
       ros::NodeHandle model_nh,
@@ -99,6 +102,7 @@ private:
 
   boost::shared_ptr<hector_quadrotor_controller::ImuSubscriberHelper> imu_sub_helper_;
   boost::shared_ptr<hector_quadrotor_controller::OdomSubscriberHelper> odom_sub_helper_;
+  boost::shared_ptr<hector_quadrotor_controller::EnableMotorsServiceHelper> motor_status_service_helper_;
 
   ros::Publisher wrench_pub_, motor_status_pub_;
 

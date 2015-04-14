@@ -8,6 +8,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Accel.h"
 #include "geometry_msgs/TransformStamped.h"
+#include "hector_uav_msgs/EnableMotors.h"
 #include "std_msgs/Header.h"
 #include "ros/ros.h"
 
@@ -34,23 +35,23 @@ namespace hector_quadrotor_controller
 
   };
 
-  class MotorStatusSubscriberHelper
+  class EnableMotorsServiceHelper
   {
   public:
-    MotorStatusSubscriberHelper(ros::NodeHandle &nh, std::string topic, hector_uav_msgs::MotorStatus &motor_status)
-        : motor_status_(motor_status)
+    EnableMotorsServiceHelper(ros::NodeHandle &nh, boost::function<bool(bool)> enable_motors)
+        : enable_motors_(enable_motors)
     {
-      motor_status_sub_ = nh.subscribe<hector_uav_msgs::MotorStatus>(topic, 1, boost::bind(
-          &MotorStatusSubscriberHelper::motorStatusCallback, this, _1));
+      motor_status_srv_ = nh.advertiseService("enable_motors", &EnableMotorsServiceHelper::enableMotorsCb, this);
     }
 
   private:
-    hector_uav_msgs::MotorStatus &motor_status_;
-    ros::Subscriber motor_status_sub_;
+    ros::ServiceServer motor_status_srv_;
+    boost::function<bool(bool)> enable_motors_;
 
-    void motorStatusCallback(const hector_uav_msgs::MotorStatusConstPtr &motor_status)
+    bool enableMotorsCb(hector_uav_msgs::EnableMotors::Request &req, hector_uav_msgs::EnableMotors::Response &res)
     {
-      motor_status_ = *motor_status;
+      res.success = enable_motors_(req.enable);
+      return true;
     }
 
   };
