@@ -40,15 +40,6 @@ add_library(hector_quadrotor_controller src/quadrotor_interface.cpp src/pid.cpp)
 target_link_libraries(hector_quadrotor_controller ${catkin_LIBRARIES})
 add_dependencies(hector_quadrotor_controller hector_uav_msgs_generate_messages_cpp)
 
-add_library(hector_quadrotor_pose_controller src/pose_controller.cpp)
-target_link_libraries(hector_quadrotor_pose_controller hector_quadrotor_controller)
-
-add_library(hector_quadrotor_twist_controller src/twist_controller.cpp)
-target_link_libraries(hector_quadrotor_twist_controller hector_quadrotor_controller ${BOOST_LIBRARIES})
-
-add_library(hector_quadrotor_motor_controller src/motor_controller.cpp)
-target_link_libraries(hector_quadrotor_motor_controller hector_quadrotor_controller)
-
 #############
 ## Install ##
 #############
@@ -57,7 +48,7 @@ target_link_libraries(hector_quadrotor_motor_controller hector_quadrotor_control
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 ## Mark executables and/or libraries for installation
-install(TARGETS hector_quadrotor_controller hector_quadrotor_pose_controller hector_quadrotor_twist_controller hector_quadrotor_motor_controller
+install(TARGETS hector_quadrotor_controller
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

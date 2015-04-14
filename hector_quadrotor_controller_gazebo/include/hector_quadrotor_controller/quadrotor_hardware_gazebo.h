@@ -74,17 +74,18 @@ public:
   virtual void writeSim(ros::Time time, ros::Duration period);
 
 private:
-  void motorStatusCallback(const hector_uav_msgs::MotorStatusConstPtr &motor_status);
 
-protected:
+  double mass_;
+  double inertia_[3];
+
   std_msgs::Header header_;
   geometry_msgs::Pose pose_;
-  geometry_msgs::Twist twist_, acceleration_;
+  geometry_msgs::Twist twist_;
+  geometry_msgs::Accel acceleration_;
   sensor_msgs::Imu imu_;
   MotorStatus motor_status_;
 
-  WrenchCommandHandlePtr wrench_input_;
-  MotorCommandHandlePtr motor_input_;
+  AccelCommandHandlePtr accel_input_;
 
   boost::shared_ptr<hector_quadrotor_controller::WrenchLimiter> wrench_limiter_;
   std::string base_link_frame_, world_frame_;
@@ -99,9 +100,8 @@ protected:
   boost::shared_ptr<hector_quadrotor_controller::ImuSubscriberHelper> imu_sub_helper_;
   boost::shared_ptr<hector_quadrotor_controller::OdomSubscriberHelper> odom_sub_helper_;
 
-  ros::Subscriber subscriber_motor_status_;
-  ros::Publisher publisher_wrench_command_;
-  ros::Publisher publisher_motor_command_;
+  ros::Publisher wrench_pub_, motor_status_pub_;
+
 };
 
 } // namespace hector_quadrotor_controller_gazebo

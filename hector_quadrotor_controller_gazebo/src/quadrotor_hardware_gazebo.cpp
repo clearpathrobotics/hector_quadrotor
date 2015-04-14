@@ -37,12 +37,12 @@ namespace hector_quadrotor_controller_gazebo
   {
     this->registerInterface(static_cast<QuadrotorInterface *>(this));
 
-    wrench_input_ = addInput<WrenchCommandHandle>("wrench");
-    motor_input_ = addInput<MotorCommandHandle>("motor");
+    accel_input_ = addInput<AccelCommandHandle>("accel");
   }
 
   QuadrotorHardwareSim::~QuadrotorHardwareSim()
-  {
+  {//    wrench_input_ = addInput<WrenchCommandHandle>("wrench");
+//    motor_input_ = addInput<MotorCommandHandle>("motor");
 
   }
 
@@ -94,13 +94,15 @@ namespace hector_quadrotor_controller_gazebo
       std::endl;
     }
 
+    motor_status_.on = true;
+    motor_status_.running = true;
+
     wrench_limiter_.reset(new WrenchLimiter(limits_nh, "wrench"));
 
-    // subscribe motor_status
-    subscriber_motor_status_ = model_nh.subscribe<hector_uav_msgs::MotorStatus>("motor_status", 1, boost::bind(
-        &QuadrotorHardwareSim::motorStatusCallback, this, _1));
-    publisher_wrench_command_ = model_nh.advertise<geometry_msgs::WrenchStamped>("command/wrench", 1);
-    publisher_motor_command_ = model_nh.advertise<hector_uav_msgs::MotorCommand>("command/motor", 1);
+    double temp;
+    getMassAndInertia(temp, inertia_);
+
+    wrench_pub_ = model_nh.advertise<geometry_msgs::WrenchStamped>("command/wrench", 1);
 
     return true;
   }
@@ -115,11 +117,6 @@ namespace hector_quadrotor_controller_gazebo
     inertia[1] = Inertia.y;
     inertia[2] = Inertia.z;
     return true;
-  }
-
-  void QuadrotorHardwareSim::motorStatusCallback(const hector_uav_msgs::MotorStatusConstPtr &motor_status)
-  {
-    motor_status_ = *motor_status;
   }
 
   void QuadrotorHardwareSim::readSim(ros::Time time, ros::Duration period)
@@ -188,31 +185,27 @@ namespace hector_quadrotor_controller_gazebo
 
   void QuadrotorHardwareSim::writeSim(ros::Time time, ros::Duration period)
   {
-    bool write_to_motors = false;
 
-    if (motor_input_->connected() && motor_input_->enabled())
-    {
-      publisher_motor_command_.publish(motor_input_->getCommand());
-      write_to_motors = true;
-    }
-
-    // TODO have sim controller take in accelerations instead
-    if (wrench_input_->connected() && wrench_input_->enabled())
+    if (accel_input_->connected() && accel_input_->enabled() && motor_status_.on && motor_status_.running)
     {
       geometry_msgs::WrenchStamped wrench;
       wrench.header.stamp = time;
       wrench.header.frame_id = base_link_frame_;
-      wrench.wrench = wrench_limiter_->limit(wrench_input_->getCommand());
 
-      publisher_wrench_command_.publish(wrench);
+      // Convert accelerations into force and torque
+      wrench.wrench.torque.x = accel_input_->getCommand().angular.x * inertia_[0];
+      wrench.wrench.torque.y = accel_input_->getCommand().angular.y * inertia_[1];
+      wrench.wrench.torque.z = accel_input_->getCommand().angular.z * inertia_[2];
+      wrench.wrench.force.z = accel_input_->getCommand().linear.z;
 
-      if (!write_to_motors)
-      {
-        gazebo::math::Vector3 force(wrench.wrench.force.x, wrench.wrench.force.y, wrench.wrench.force.z);
-        gazebo::math::Vector3 torque(wrench.wrench.torque.x, wrench.wrench.torque.y, wrench.wrench.torque.z);
-        link_->AddRelativeForce(force);
-        link_->AddRelativeTorque(torque - link_->GetInertial()->GetCoG().Cross(force));
-      }
+//      wrench.wrench = wrench_limiter_->limit(wrench.wrench);
+
+      wrench_pub_.publish(wrench);
+
+      gazebo::math::Vector3 force(wrench.wrench.force.x, wrench.wrench.force.y, wrench.wrench.force.z);
+      gazebo::math::Vector3 torque(wrench.wrench.torque.x, wrench.wrench.torque.y, wrench.wrench.torque.z);
+      link_->AddRelativeForce(force);
+      link_->AddRelativeTorque(torque - link_->GetInertial()->GetCoG().Cross(force));
     }
   }
 

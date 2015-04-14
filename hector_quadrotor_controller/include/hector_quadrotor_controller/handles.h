@@ -31,6 +31,7 @@
 
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Accel.h>
 #include <geometry_msgs/Wrench.h>
 #include <sensor_msgs/Imu.h>
 #include <hector_uav_msgs/MotorStatus.h>
@@ -46,6 +47,7 @@ class QuadrotorInterface;
 using geometry_msgs::Pose;
 using geometry_msgs::Point;
 using geometry_msgs::Quaternion;
+using geometry_msgs::Accel;
 using geometry_msgs::Twist;
 using geometry_msgs::Vector3;
 using geometry_msgs::Wrench;
@@ -118,14 +120,14 @@ public:
 };
 typedef boost::shared_ptr<TwistHandle> TwistHandlePtr;
 
-class AccelerationHandle : public Handle_<AccelerationHandle, Twist>
+class AccelerationHandle : public Handle_<AccelerationHandle, Accel>
 {
 public:
   using Base::operator=;
 
   AccelerationHandle() : Base("acceleration") {}
   AccelerationHandle(QuadrotorInterface *interface) : Base(interface, "acceleration") {}
-  AccelerationHandle(QuadrotorInterface *interface, const Twist *acceleration) : Base(interface, acceleration, "acceleration") {}
+  AccelerationHandle(QuadrotorInterface *interface, const Accel *acceleration) : Base(interface, acceleration, "acceleration") {}
   virtual ~AccelerationHandle() {}
 
   const ValueType& acceleration() const { return *get(); }
@@ -385,6 +387,19 @@ public:
   virtual ~TwistCommandHandle() {}
 };
 typedef boost::shared_ptr<TwistCommandHandle> TwistCommandHandlePtr;
+
+class AccelCommandHandle : public CommandHandle_<AccelCommandHandle, Accel>
+{
+public:
+
+  using Base::operator=;
+
+  AccelCommandHandle() {}
+  AccelCommandHandle(QuadrotorInterface *interface, const std::string& name, const std::string& field = std::string()) : Base(interface, name, field) {}
+  AccelCommandHandle(Accel* command) { *this = command; }
+  virtual ~AccelCommandHandle() {}
+};
+typedef boost::shared_ptr<AccelCommandHandle> AccelCommandHandlePtr;
 
 class HorizontalVelocityCommandHandle : public CommandHandle_<HorizontalVelocityCommandHandle, Vector3, TwistCommandHandle>
 {
