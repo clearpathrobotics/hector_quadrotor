@@ -95,11 +95,12 @@ namespace hector_quadrotor_controller_gazebo
       std::endl;
     }
 
-    // TODO add motor on/off service and publisher
-    motor_status_pub_ = model_nh.advertise<hector_uav_msgs::MotorStatus>("motor_status", 1);
+    motor_status_.on = true;
+    motor_status_.header.frame_id = base_link_frame_;
+    motor_status_pub_ = model_nh.advertise<hector_uav_msgs::MotorStatus>("motor_status", 10);
     motor_status_service_helper_ = boost::make_shared<EnableMotorsServiceHelper>(model_nh, boost::bind(
         &QuadrotorHardwareSim::enableMotors, this, _1));
-    motor_status_.running = true;
+
 
     wrench_limiter_ = boost::make_shared<WrenchLimiter>(limits_nh, "wrench");
 
@@ -184,6 +185,7 @@ namespace hector_quadrotor_controller_gazebo
       imu_.linear_acceleration.z = gz_linear_acceleration_body.z;
     }
 
+    motor_status_.header.stamp = time;
     motor_status_pub_.publish(motor_status_);
 
   }
@@ -191,7 +193,7 @@ namespace hector_quadrotor_controller_gazebo
   void QuadrotorHardwareSim::writeSim(ros::Time time, ros::Duration period)
   {
 
-    if (accel_input_->connected() && accel_input_->enabled() && motor_status_.running)
+    if (accel_input_->connected() && accel_input_->enabled() && motor_status_.on && motor_status_.running)
     {
       geometry_msgs::WrenchStamped wrench;
       wrench.header.stamp = time;

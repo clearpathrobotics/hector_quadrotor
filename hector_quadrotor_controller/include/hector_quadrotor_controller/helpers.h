@@ -11,6 +11,7 @@
 #include "hector_uav_msgs/EnableMotors.h"
 #include "std_msgs/Header.h"
 #include "ros/ros.h"
+#include <boost/thread/mutex.hpp>
 
 namespace hector_quadrotor_controller
 {
@@ -181,6 +182,57 @@ namespace hector_quadrotor_controller
 //      acceleration_ = ???
     }
 
+  };
+
+  class AttitudeSubscriberHelper
+  {
+  public:
+
+    AttitudeSubscriberHelper(ros::NodeHandle nh, boost::mutex &command_mutex,
+                             hector_uav_msgs::AttitudeCommand &attitude_command,
+                             hector_uav_msgs::YawrateCommand &yawrate_command,
+                             hector_uav_msgs::ThrustCommand &thrust_command)
+        : command_mutex_(command_mutex), attitude_command_(attitude_command), yawrate_command_(yawrate_command),
+          thrust_command_(thrust_command)
+    {
+      attitude_subscriber_ = nh.subscribe<hector_uav_msgs::AttitudeCommand>("attitude", 1, boost::bind(
+          &AttitudeSubscriberHelper::attitudeCommandCb, this, _1));
+      yawrate_subscriber_ = nh.subscribe<hector_uav_msgs::YawrateCommand>("yawrate", 1, boost::bind(
+          &AttitudeSubscriberHelper::yawrateCommandCb, this, _1));
+      thrust_subscriber_ = nh.subscribe<hector_uav_msgs::ThrustCommand>("thrust", 1, boost::bind(
+          &AttitudeSubscriberHelper::thrustCommandCb, this, _1));
+    }
+
+  private:
+    ros::Subscriber attitude_subscriber_, yawrate_subscriber_, thrust_subscriber_;
+    boost::mutex &command_mutex_;
+    hector_uav_msgs::AttitudeCommand &attitude_command_;
+    hector_uav_msgs::YawrateCommand &yawrate_command_;
+    hector_uav_msgs::ThrustCommand &thrust_command_;
+
+    void attitudeCommandCb(const hector_uav_msgs::AttitudeCommandConstPtr &command)
+    {
+      boost::mutex::scoped_lock lock(command_mutex_);
+      attitude_command_ = *command;
+      if (attitude_command_.header.stamp.isZero())
+      { attitude_command_.header.stamp = ros::Time::now(); }
+    }
+
+    void yawrateCommandCb(const hector_uav_msgs::YawrateCommandConstPtr &command)
+    {
+      boost::mutex::scoped_lock lock(command_mutex_);
+      yawrate_command_ = *command;
+      if (yawrate_command_.header.stamp.isZero())
+      { yawrate_command_.header.stamp = ros::Time::now(); }
+    }
+
+    void thrustCommandCb(const hector_uav_msgs::ThrustCommandConstPtr &command)
+    {
+      boost::mutex::scoped_lock lock(command_mutex_);
+      thrust_command_ = *command;
+      if (thrust_command_.header.stamp.isZero())
+      { attitude_command_.header.stamp = ros::Time::now(); }
+    }
   };
 
 

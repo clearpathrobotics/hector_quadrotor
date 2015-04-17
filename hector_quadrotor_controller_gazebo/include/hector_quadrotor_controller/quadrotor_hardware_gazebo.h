@@ -98,7 +98,7 @@ namespace hector_quadrotor_controller_gazebo
     geometry_msgs::Twist twist_;
     geometry_msgs::Accel acceleration_;
     sensor_msgs::Imu imu_;
-    MotorStatus motor_status_;
+    hector_uav_msgs::MotorStatus motor_status_;
 
     AccelCommandHandlePtr accel_input_;
 
