@@ -68,7 +68,9 @@ namespace hector_quadrotor_controller_gazebo
     controller_nh.getParam("state_topic", state_topic);
     if (!state_topic.empty())
     {
-      odom_sub_helper_.reset(new OdomSubscriberHelper(model_nh, state_topic, pose_, twist_, acceleration_, header_));
+      odom_sub_helper_ = boost::make_shared<OdomSubscriberHelper>(model_nh, state_topic, boost::ref(pose_),
+                                                                  boost::ref(twist_), boost::ref(acceleration_),
+                                                                  boost::ref(header_));
       gzlog << "[hector_quadrotor_controller_gazebo] Using topic '" << state_topic << "' as state input for control" <<
       std::endl;
     }
@@ -83,7 +85,7 @@ namespace hector_quadrotor_controller_gazebo
     controller_nh.getParam("imu_topic", imu_topic);
     if (!imu_topic.empty())
     {
-      imu_sub_helper_.reset(new ImuSubscriberHelper(model_nh, imu_topic, imu_));
+      imu_sub_helper_ = boost::make_shared<ImuSubscriberHelper>(model_nh, imu_topic, boost::ref(imu_));
       gzlog << "[hector_quadrotor_controller_gazebo] Using topic '" << imu_topic << "' as imu input for control" <<
       std::endl;
     }
@@ -95,12 +97,11 @@ namespace hector_quadrotor_controller_gazebo
 
     // TODO add motor on/off service and publisher
     motor_status_pub_ = model_nh.advertise<hector_uav_msgs::MotorStatus>("motor_status", 1);
-    motor_status_service_helper_.reset(
-        new EnableMotorsServiceHelper(model_nh, boost::bind(&QuadrotorHardwareSim::enableMotors, this, _1)));
-    motor_status_.on = true;
+    motor_status_service_helper_ = boost::make_shared<EnableMotorsServiceHelper>(model_nh, boost::bind(
+        &QuadrotorHardwareSim::enableMotors, this, _1));
     motor_status_.running = true;
 
-    wrench_limiter_.reset(new WrenchLimiter(limits_nh, "wrench"));
+    wrench_limiter_ = boost::make_shared<WrenchLimiter>(limits_nh, "wrench");
 
     getMassAndInertia(mass_, inertia_);
 
@@ -190,7 +191,7 @@ namespace hector_quadrotor_controller_gazebo
   void QuadrotorHardwareSim::writeSim(ros::Time time, ros::Duration period)
   {
 
-    if (accel_input_->connected() && accel_input_->enabled() && motor_status_.on && motor_status_.running)
+    if (accel_input_->connected() && accel_input_->enabled() && motor_status_.running)
     {
       geometry_msgs::WrenchStamped wrench;
       wrench.header.stamp = time;
@@ -215,7 +216,7 @@ namespace hector_quadrotor_controller_gazebo
 
   bool QuadrotorHardwareSim::enableMotors(bool enabled)
   {
-    motor_status_.on = motor_status_.running = enabled;
+    motor_status_.running = enabled;
     return true;
   }
 } // namespace hector_quadrotor_controller_gazebo

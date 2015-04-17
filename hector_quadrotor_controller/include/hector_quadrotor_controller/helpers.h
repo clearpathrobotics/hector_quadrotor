@@ -18,7 +18,7 @@ namespace hector_quadrotor_controller
   class ImuSubscriberHelper
   {
   public:
-    ImuSubscriberHelper(ros::NodeHandle &nh, std::string topic, sensor_msgs::Imu &imu)
+    ImuSubscriberHelper(ros::NodeHandle nh, std::string topic, sensor_msgs::Imu &imu)
         : imu_(imu)
     {
       imu_sub_ = nh.subscribe<sensor_msgs::Imu>(topic, 1, boost::bind(&ImuSubscriberHelper::imuCallback, this, _1));
@@ -38,7 +38,7 @@ namespace hector_quadrotor_controller
   class EnableMotorsServiceHelper
   {
   public:
-    EnableMotorsServiceHelper(ros::NodeHandle &nh, boost::function<bool(bool)> enable_motors)
+    EnableMotorsServiceHelper(ros::NodeHandle nh, boost::function<bool(bool)> enable_motors)
         : enable_motors_(enable_motors)
     {
       motor_status_srv_ = nh.advertiseService("enable_motors", &EnableMotorsServiceHelper::enableMotorsCb, this);
@@ -61,7 +61,7 @@ namespace hector_quadrotor_controller
   class OdomSubscriberHelper
   {
   public:
-    OdomSubscriberHelper(ros::NodeHandle &nh, std::string topic, geometry_msgs::Pose &pose, geometry_msgs::Twist &twist,
+    OdomSubscriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose, geometry_msgs::Twist &twist,
                          geometry_msgs::Accel &acceleration, std_msgs::Header &header)
         : pose_(pose), twist_(twist), acceleration_(acceleration), header_(header)
     {
@@ -117,7 +117,7 @@ namespace hector_quadrotor_controller
   class PoseSubscriberHelper
   {
   public:
-    PoseSubscriberHelper(ros::NodeHandle &nh, std::string topic, geometry_msgs::Pose &pose, geometry_msgs::Twist &twist,
+    PoseSubscriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose, geometry_msgs::Twist &twist,
                          geometry_msgs::Accel &acceleration, std_msgs::Header &header)
         : pose_(pose), twist_(twist), acceleration_(acceleration), header_(header)
     {
@@ -150,7 +150,7 @@ namespace hector_quadrotor_controller
   class TransformSubscriberHelper
   {
   public:
-    TransformSubscriberHelper(ros::NodeHandle &nh, std::string topic, geometry_msgs::Pose &pose,
+    TransformSubscriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose,
                               geometry_msgs::Twist &twist, geometry_msgs::Accel &acceleration, std_msgs::Header &header)
         : pose_(pose), twist_(twist), acceleration_(acceleration), header_(header)
     {
