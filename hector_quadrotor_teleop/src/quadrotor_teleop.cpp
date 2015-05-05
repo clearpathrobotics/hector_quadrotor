@@ -56,6 +56,12 @@ namespace hector_quadrotor
       int axis;
       double max_;
       double min_;
+      bool first_;
+
+      Axis(){
+        //Prevent publishing until first non-zero received
+        first_ = false;
+      }
 
       void setLimits(double min, double max)
       {
@@ -250,7 +256,19 @@ namespace hector_quadrotor
         return 0;
         ROS_ERROR_STREAM("Axis " << axis.axis << " out of range, joy has " << joy->axes.size() << " axes");
       }
+
       double output = std::abs(axis.axis) / axis.axis * joy->axes[std::abs(axis.axis) - 1];
+
+      if(!axis.first_){
+        if(output == 0.0)
+        {
+          // Return semantic 0.0 without scaling if axis hasn't received first message
+          return 0.0;
+        }else{
+          // Received first message, so clear flag
+          axis.first_ = true;
+        }
+      }
 
       // Scale axis with min/max
       return (output + 1) * (axis.max_ - axis.min_) / 2 + axis.min_;
