@@ -36,6 +36,7 @@
 #include <hector_uav_msgs/AttitudeCommand.h>
 #include <hector_quadrotor_controller/limiters.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <hector_uav_msgs/EnableMotors.h>
 
 namespace hector_quadrotor
 {
@@ -45,8 +46,9 @@ namespace hector_quadrotor
   private:
     ros::NodeHandle node_handle_;
     ros::Subscriber joy_subscriber_;
-
     ros::Publisher position_publisher_, velocity_publisher_, attitude_publisher_, yawrate_publisher_, thrust_publisher_;
+    ros::ServiceClient motor_enable_service_;
+
     geometry_msgs::PoseStamped position_;
 
     double yaw;
@@ -58,7 +60,8 @@ namespace hector_quadrotor
       double min_;
       bool first_;
 
-      Axis(){
+      Axis()
+      {
         //Prevent publishing until first non-zero received
         first_ = false;
       }
@@ -88,6 +91,7 @@ namespace hector_quadrotor
     {
       Button slow;
       Button go;
+      Button stop;
     } buttons_;
 
     std::string robot_namespace_;
@@ -109,8 +113,9 @@ namespace hector_quadrotor
       private_nh.param<double>("yaw_velocity_max", axes_.yaw.max_, 90.0 * M_PI / 180.0);
       private_nh.param<double>("yaw_velocity_min", axes_.yaw.min_, -axes_.yaw.max_);
 
-      private_nh.param<int>("slow_button", buttons_.slow.button_, 1);
-      private_nh.param<int>("go_button", buttons_.go.button_, 0);
+      private_nh.param<int>("slow_button", buttons_.slow.button_, 4);
+      private_nh.param<int>("go_button", buttons_.go.button_, 1);
+      private_nh.param<int>("stop_button", buttons_.stop.button_, 2);
       private_nh.param<double>("slow_factor", slow_factor_, 0.2);
 
       // TODO dynamic reconfig
@@ -177,6 +182,8 @@ namespace hector_quadrotor
         position_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped>(robot_namespace_ + "command/pose", 10);
       }
 
+      motor_enable_service_ = node_handle_.serviceClient<hector_uav_msgs::EnableMotors>(
+          robot_namespace_ + "enable_motors");
     }
 
     ~Teleop()
@@ -207,7 +214,17 @@ namespace hector_quadrotor
       {
         yawrate.turnrate *= slow_factor_;
       }
+
       yawrate_publisher_.publish(yawrate);
+
+      if (getButton(joy, buttons_.go))
+      {
+        enableMotors(true);
+      }
+      if (getButton(joy, buttons_.stop))
+      {
+        enableMotors(false);
+      }
     }
 
     void joyTwistCallback(const sensor_msgs::JoyConstPtr &joy)
@@ -228,6 +245,14 @@ namespace hector_quadrotor
         velocity.twist.angular.z *= slow_factor_;
       }
       velocity_publisher_.publish(velocity);
+      if (getButton(joy, buttons_.go))
+      {
+        enableMotors(true);
+      }
+      if (getButton(joy, buttons_.stop))
+      {
+        enableMotors(false);
+      }
     }
 
     void joyPoseCallback(const sensor_msgs::JoyConstPtr &joy)
@@ -245,7 +270,12 @@ namespace hector_quadrotor
       position_.pose.orientation = tf2::toMsg(q);
       if (getButton(joy, buttons_.go))
       {
+        //TODO action server start
         position_publisher_.publish(position_);
+      }
+      if (getButton(joy, buttons_.stop))
+      {
+        //TODO action server preempt
       }
     }
 
@@ -259,12 +289,15 @@ namespace hector_quadrotor
 
       double output = std::abs(axis.axis) / axis.axis * joy->axes[std::abs(axis.axis) - 1];
 
-      if(!axis.first_){
-        if(output == 0.0)
+      if (!axis.first_)
+      {
+        if (output == 0.0)
         {
           // Return semantic 0.0 without scaling if axis hasn't received first message
           return 0.0;
-        }else{
+        }
+        else
+        {
           // Received first message, so clear flag
           axis.first_ = true;
         }
@@ -284,15 +317,27 @@ namespace hector_quadrotor
       return joy->buttons[button.button_ - 1] > 0;
     }
 
+    bool enableMotors(bool enable)
+    {
+      if (!motor_enable_service_.waitForExistence(ros::Duration(5.0)))
+      {
+        ROS_WARN("Motor enable service not found");
+        return false;
+      }
+      hector_uav_msgs::EnableMotors srv;
+      srv.request.enable = enable;
+      return motor_enable_service_.call(srv);
+    }
+
     void stop()
     {
+      if (position_publisher_.getNumSubscribers() > 0)
+      {
+        // TODO action server stop
+      }
       if (velocity_publisher_.getNumSubscribers() > 0)
       {
         velocity_publisher_.publish(geometry_msgs::TwistStamped());
-      }
-      if (position_publisher_.getNumSubscribers() > 0)
-      {
-        velocity_publisher_.publish(geometry_msgs::PoseStamped());
       }
       if (attitude_publisher_.getNumSubscribers() > 0)
       {
@@ -306,7 +351,6 @@ namespace hector_quadrotor
       {
         yawrate_publisher_.publish(hector_uav_msgs::YawrateCommand());
       }
-
     }
   };
 
