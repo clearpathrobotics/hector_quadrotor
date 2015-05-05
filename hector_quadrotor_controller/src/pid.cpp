@@ -86,7 +86,7 @@ template <typename T> static inline T& checknan(T& value)
 }
 
 
-
+// TODO use a lazy publisher for debugging instead
 double PID::updateDebug(double input, double x, double dx, const ros::Duration& dt)
 {
 
