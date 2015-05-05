@@ -304,7 +304,15 @@ namespace hector_quadrotor
       }
 
       // Scale axis with min/max
-      return (output + 1) * (axis.max_ - axis.min_) / 2 + axis.min_;
+      output = (output + 1) * (axis.max_ - axis.min_) / 2 + axis.min_;
+
+      // TODO keep or remove deadzone? may not be needed
+//      if (std::abs(output) < axis.max_ * 0.1)
+//      {
+//        output = 0.0;
+//      }
+
+      return output;
     }
 
     bool getButton(const sensor_msgs::JoyConstPtr &joy, Button button)
