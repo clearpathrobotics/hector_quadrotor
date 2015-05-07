@@ -24,7 +24,7 @@ namespace hector_quadrotor_controller
     {
       nh.param<T>(field + "/max", max_, std::numeric_limits<T>::max());
       nh.param<T>(field + "/min", min_, -max_);
-      ROS_INFO_STREAM("nh " << nh.getNamespace() + "/" + field << " inited " << field << " with min " << min_ << " and max " << max_);
+      ROS_DEBUG_STREAM("nh " << nh.getNamespace() + "/" + field << " inited " << field << " with min " << min_ << " and max " << max_);
     }
 
     T limit(const T &value)

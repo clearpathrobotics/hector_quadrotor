@@ -92,6 +92,7 @@ namespace hector_quadrotor
       Button slow;
       Button go;
       Button stop;
+      Button interrupt;
     } buttons_;
 
     std::string robot_namespace_;
@@ -116,6 +117,7 @@ namespace hector_quadrotor
       private_nh.param<int>("slow_button", buttons_.slow.button_, 4);
       private_nh.param<int>("go_button", buttons_.go.button_, 1);
       private_nh.param<int>("stop_button", buttons_.stop.button_, 2);
+      private_nh.param<int>("interrupt_button", buttons_.interrupt.button_, 3);
       private_nh.param<double>("slow_factor", slow_factor_, 0.2);
 
       // TODO dynamic reconfig
@@ -179,7 +181,18 @@ namespace hector_quadrotor
 
         joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1,
                                                                    boost::bind(&Teleop::joyPoseCallback, this, _1));
+
+        position_.pose.position.x = 0;
+        position_.pose.position.y = 0;
+        position_.pose.position.z = 0;
+        position_.pose.orientation.x = 0;
+        position_.pose.orientation.y = 0;
+        position_.pose.orientation.z = 0;
+        position_.pose.orientation.w = 1;
         position_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped>(robot_namespace_ + "command/pose", 10);
+      }else
+      {
+        ROS_ERROR("Unsupported control mode");
       }
 
       motor_enable_service_ = node_handle_.serviceClient<hector_uav_msgs::EnableMotors>(
@@ -259,9 +272,8 @@ namespace hector_quadrotor
     {
       position_.header.stamp = ros::Time::now();
       position_.header.frame_id = world_frame_;
-
-      position_.pose.position.x += getAxis(joy, axes_.x) / repeat_rate_;
-      position_.pose.position.y += getAxis(joy, axes_.y) / repeat_rate_;
+      position_.pose.position.x += (cos(yaw) * getAxis(joy, axes_.x) - sin(yaw) * getAxis(joy, axes_.y)) / repeat_rate_;
+      position_.pose.position.y += (cos(yaw) * getAxis(joy, axes_.y) + sin(yaw) * getAxis(joy, axes_.x)) / repeat_rate_;
       position_.pose.position.z += getAxis(joy, axes_.z) / repeat_rate_;
       yaw += getAxis(joy, axes_.yaw) / repeat_rate_;
 
@@ -272,10 +284,15 @@ namespace hector_quadrotor
       {
         //TODO action server start
         position_publisher_.publish(position_);
+        enableMotors(true);
+      }
+      if (getButton(joy, buttons_.interrupt))
+      {
+        //TODO action server preempt
       }
       if (getButton(joy, buttons_.stop))
       {
-        //TODO action server preempt
+        enableMotors(false);
       }
     }
 
@@ -307,10 +324,10 @@ namespace hector_quadrotor
       output = (output + 1) * (axis.max_ - axis.min_) / 2 + axis.min_;
 
       // TODO keep or remove deadzone? may not be needed
-//      if (std::abs(output) < axis.max_ * 0.1)
-//      {
-//        output = 0.0;
-//      }
+      if (std::abs(output) < axis.max_ * 0.2)
+      {
+        output = 0.0;
+      }
 
       return output;
     }

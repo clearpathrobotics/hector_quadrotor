@@ -12,6 +12,11 @@
 #include "std_msgs/Header.h"
 #include "ros/ros.h"
 #include <boost/thread/mutex.hpp>
+#include <boost/circular_buffer.hpp>
+#include "tf2/LinearMath/Matrix3x3.h"
+#include "tf2/LinearMath/Quaternion.h"
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include "hector_quadrotor_controller/filters.h"
 
 namespace hector_quadrotor_controller
 {
@@ -148,15 +153,132 @@ namespace hector_quadrotor_controller
 
   };
 
-  class TransformSubscriberHelper
+  class PoseFilterHelper
+  {
+
+  private:
+
+    static const int FIELDS = 7;
+    enum Field
+    {
+      PX, PY, PZ, QX, QY, QZ, QW
+    };
+
+    std::vector<ButterworthFilter> pose_filter_;
+
+  public:
+
+    PoseFilterHelper()
+    {
+      pose_filter_.assign(FIELDS, ButterworthFilter());
+    }
+
+    geometry_msgs::Pose filterPoseMeasurement(const geometry_msgs::Pose &pose)
+    {
+      geometry_msgs::Pose output;
+
+      output.position.x = pose_filter_[PX].filter(pose.position.x);
+      output.position.y = pose_filter_[PY].filter(pose.position.y);
+      output.position.z = pose_filter_[PZ].filter(pose.position.z);
+
+      tf2::Quaternion q(
+          pose_filter_[QX].filter(pose.orientation.x),
+          pose_filter_[QY].filter(pose.orientation.y),
+          pose_filter_[QZ].filter(pose.orientation.z),
+          pose_filter_[QW].filter(pose.orientation.w)
+      );
+      q.normalize();
+      output.orientation.x = q.getX();
+      output.orientation.y = q.getY();
+      output.orientation.z = q.getZ();
+      output.orientation.w = q.getW();
+      return output;
+    }
+
+  };
+
+  class PoseDifferentiatorHelper
+  {
+
+  public:
+
+    void updateAndEstimate(const ros::Time &time, const geometry_msgs::Pose &pose, geometry_msgs::Twist &twist, geometry_msgs::Accel &accel){
+
+      if (last_pose_)
+      {
+
+        double dt = (time - last_time_).toSec();
+        double roll, pitch, yaw, last_roll, last_pitch, last_yaw;
+        tf2::Quaternion q;
+
+        tf2::fromMsg(pose.orientation, q);
+        tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
+
+        tf2::fromMsg(last_pose_->orientation, q);
+        tf2::Matrix3x3(q).getRPY(last_roll, last_pitch, last_yaw);
+
+        twist.linear.x = (pose.position.x - last_pose_->position.x) / dt;
+        twist.linear.y = (pose.position.y - last_pose_->position.y) / dt;
+        twist.linear.z = (pose.position.z - last_pose_->position.z) / dt;
+        twist.angular.x = differenceWithWraparound(roll, last_roll) / dt;
+        twist.angular.y = differenceWithWraparound(pitch, last_pitch) / dt;
+        twist.angular.z = differenceWithWraparound(yaw, last_yaw) / dt;
+
+        if (last_twist_)
+        {
+          accel.linear.x = (twist.linear.x - last_twist_->linear.x) / dt;
+          accel.linear.y = (twist.linear.y - last_twist_->linear.y) / dt;
+          accel.linear.z = (twist.linear.z - last_twist_->linear.z) / dt;
+
+          accel.angular.x = (twist.angular.x - last_twist_->angular.x) / dt;
+          accel.angular.y = (twist.angular.y - last_twist_->angular.y) / dt;
+          accel.angular.z = (twist.angular.z - last_twist_->angular.z) / dt;
+          *last_twist_ = twist;
+        }
+        else
+        {
+          last_twist_ = boost::make_shared<geometry_msgs::Twist>(twist);
+        }
+        *last_pose_ = pose;
+
+      }
+      else
+      {
+        last_pose_ = boost::make_shared<geometry_msgs::Pose>(pose);
+      }
+      last_time_ = time;
+
+    }
+
+  private:
+    geometry_msgs::PosePtr last_pose_;
+    geometry_msgs::TwistPtr last_twist_;
+    ros::Time last_time_;
+
+    double differenceWithWraparound(double angle, double last_angle){
+
+      double diff = angle - last_angle;
+      if(diff > M_PI){
+        return diff - 2 * M_PI;
+      }else if(diff < -M_PI){
+        return diff + 2 * M_PI;
+      }else{
+        return diff;
+      }
+
+    }
+
+  };
+
+  class StateSubsriberHelper
   {
   public:
-    TransformSubscriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose,
-                              geometry_msgs::Twist &twist, geometry_msgs::Accel &acceleration, std_msgs::Header &header)
-        : pose_(pose), twist_(twist), acceleration_(acceleration), header_(header)
+    StateSubsriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose,
+                         geometry_msgs::Twist &twist, geometry_msgs::Accel &accel, std_msgs::Header &header)
+        : pose_(pose), twist_(twist), accel_(accel), header_(header)
     {
       tf_sub_ = nh.subscribe<geometry_msgs::TransformStamped>(topic, 1,
-                                                              boost::bind(&TransformSubscriberHelper::transformCallback,
+                                                              boost::bind(&StateSubsriberHelper::tfCb,
                                                                           this, _1));
     }
 
@@ -165,10 +287,13 @@ namespace hector_quadrotor_controller
 
     geometry_msgs::Pose &pose_;
     geometry_msgs::Twist &twist_;
-    geometry_msgs::Accel &acceleration_;
+    geometry_msgs::Accel &accel_;
     std_msgs::Header header_;
 
-    void transformCallback(const geometry_msgs::TransformStampedConstPtr &transform)
+    PoseFilterHelper filter_;
+    PoseDifferentiatorHelper diff_;
+
+    void tfCb(const geometry_msgs::TransformStampedConstPtr &transform)
     {
 
       header_ = transform->header;
@@ -177,10 +302,38 @@ namespace hector_quadrotor_controller
       pose_.position.z = transform->transform.translation.z;
       pose_.orientation = transform->transform.rotation;
 
-      // TODO calculate twist and accel
-//      twist_ = odom->twist.twist;
-//      acceleration_ = ???
+      pose_ = filter_.filterPoseMeasurement(pose_);
+      diff_.updateAndEstimate(header_.stamp, pose_, twist_, accel_);
     }
+
+    // TODO shapeshifter to replace PoseSubscriber and OdomSubscriberHelper
+//    void stateCb(topic_tools::ShapeShifter const &input) {
+//      if (input.getDataType() == "nav_msgs/Odometry") {
+//        nav_msgs::Odometry::ConstPtr odom = input.instantiate<nav_msgs::Odometry>();
+//        odomCallback(*odom);
+//        return;
+//      }
+//
+//      if (input.getDataType() == "geometry_msgs/PoseStamped") {
+//        geometry_msgs::PoseStamped::ConstPtr pose = input.instantiate<geometry_msgs::PoseStamped>();
+//        poseCallback(*pose);
+//        return;
+//      }
+//
+//      if (input.getDataType() == "sensor_msgs/Imu") {
+//        sensor_msgs::Imu::ConstPtr imu = input.instantiate<sensor_msgs::Imu>();
+//        imuCallback(*imu);
+//        return;
+//      }
+//
+//      if (input.getDataType() == "geometry_msgs/TransformStamped") {
+//        geometry_msgs::TransformStamped::ConstPtr tf = input.instantiate<geometry_msgs::TransformStamped>();
+//        tfCallback(*tf);
+//        return;
+//      }
+//
+//      ROS_ERROR_THROTTLE(1.0, "message_to_tf received a %s message. Supported message types: nav_msgs/Odometry geometry_msgs/PoseStamped sensor_msgs/Imu", input.getDataType().c_str());
+//    }
 
   };
 
@@ -235,6 +388,33 @@ namespace hector_quadrotor_controller
     }
   };
 
+
+//  template<typename T, typename Msg>
+//  class ABTestHelper
+//  {
+//
+//  public:
+//    ABTestHelper(ros::NodeHandle nh, std::string topic)
+//    {
+//      a_pub_ = nh.advertise<Msg>(topic + "/a", 1);
+//      b_pub_ = nh.advertise<Msg>(topic + "/b", 1);
+//    }
+//
+//    void publish(T a, T b)
+//    {
+//      a_msg.data = a;
+//      a_pub_.publish(a_msg);
+//
+//      b_msg.data = b;
+//      b_pub_.publish(b_msg);
+//    }
+//
+//  private:
+//    ros::Publisher a_pub_, b_pub_;
+//    Msg a_msg, b_msg;
+//
+//
+//  };
 
 }
 

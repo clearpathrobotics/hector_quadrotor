@@ -23,6 +23,8 @@
   <build_depend>std_srvs</build_depend>
   <build_depend>hardware_interface</build_depend>
   <build_depend>controller_interface</build_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
   <run_depend>roscpp</run_depend>
@@ -33,7 +35,8 @@
   <run_depend>std_srvs</run_depend>
   <run_depend>hardware_interface</run_depend>
   <run_depend>controller_interface</run_depend>
-
+  <run_depend>tf2</run_depend>
+  <run_depend>tf2_geometry_msgs</run_depend>
   <!-- Dependencies needed only for running tests. -->
 
   <export>

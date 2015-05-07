@@ -52,6 +52,8 @@ public:
   virtual ImuHandlePtr getSensorImu()             { return ImuHandlePtr(); }
   virtual MotorStatusHandlePtr getMotorStatus()   { return MotorStatusHandlePtr(); }
 
+
+  // TODO make non-virtual
   virtual bool getMassAndInertia(double &mass, double inertia[3]) { return false; }
 
   template <typename HandleType> boost::shared_ptr<HandleType> getHandle()

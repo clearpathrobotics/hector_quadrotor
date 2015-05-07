@@ -39,6 +39,8 @@
 
 #include <ros/node_handle.h>
 #include <hector_quadrotor_controller/limiters.h>
+#include <std_msgs/Float64.h>
+
 
 namespace hector_quadrotor_controller_gazebo
 {
@@ -117,6 +119,9 @@ namespace hector_quadrotor_controller_gazebo
     boost::shared_ptr<hector_quadrotor_controller::EnableMotorsServiceHelper> motor_status_service_helper_;
 
     ros::Publisher wrench_pub_, motor_status_pub_;
+
+    PoseFilterHelper filter_;
+    PoseDifferentiatorHelper diff_;
 
   };
 

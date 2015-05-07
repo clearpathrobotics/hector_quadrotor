@@ -108,6 +108,13 @@ namespace hector_quadrotor_controller_gazebo
 
     wrench_pub_ = model_nh.advertise<geometry_msgs::WrenchStamped>("command/wrench", 1);
 
+//    ab_x_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_x");
+//    ab_y_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_y");
+//    ab_z_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_z");
+//    ab_pitch_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_pitch");
+//    ab_roll_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_roll");
+//    ab_yaw_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_yaw");
+
     return true;
   }
 
@@ -152,18 +159,29 @@ namespace hector_quadrotor_controller_gazebo
       pose_.orientation.x = gz_pose_.rot.x;
       pose_.orientation.y = gz_pose_.rot.y;
       pose_.orientation.z = gz_pose_.rot.z;
-      twist_.linear.x = gz_velocity_.x;
-      twist_.linear.y = gz_velocity_.y;
-      twist_.linear.z = gz_velocity_.z;
-      twist_.angular.x = gz_angular_velocity_.x;
-      twist_.angular.y = gz_angular_velocity_.y;
-      twist_.angular.z = gz_angular_velocity_.z;
-      acceleration_.linear.x = gz_acceleration_.x;
-      acceleration_.linear.y = gz_acceleration_.y;
-      acceleration_.linear.z = gz_acceleration_.z;
-      acceleration_.angular.x = gz_angular_acceleration_.x;
-      acceleration_.angular.y = gz_angular_acceleration_.y;
-      acceleration_.angular.z = gz_angular_acceleration_.z;
+
+      pose_ = filter_.filterPoseMeasurement(pose_);
+      diff_.updateAndEstimate(header_.stamp, pose_, twist_, acceleration_);
+
+//      ab_x_->publish(twist_.linear.x , gz_velocity_.x);
+//      ab_y_->publish(twist_.linear.y, gz_velocity_.y);
+//      ab_z_->publish(twist_.linear.z, gz_velocity_.z);
+//      ab_roll_->publish(twist_.angular.x, gz_angular_velocity_.x);
+//      ab_pitch_->publish(twist_.angular.y, gz_angular_velocity_.y);
+//      ab_yaw_->publish(twist_.angular.z, gz_angular_velocity_.z);
+
+//      twist_.linear.x = gz_velocity_.x;
+//      twist_.linear.y = gz_velocity_.y;
+//      twist_.linear.z = gz_velocity_.z;
+//      twist_.angular.x = gz_angular_velocity_.x;
+//      twist_.angular.y = gz_angular_velocity_.y;
+//      twist_.angular.z = gz_angular_velocity_.z;
+//      acceleration_.linear.x = gz_acceleration_.x;
+//      acceleration_.linear.y = gz_acceleration_.y;
+//      acceleration_.linear.z = gz_acceleration_.z;
+//      acceleration_.angular.x = gz_angular_acceleration_.x;
+//      acceleration_.angular.y = gz_angular_acceleration_.y;
+//      acceleration_.angular.z = gz_angular_acceleration_.z;
     }
 
     if (!imu_sub_helper_)
