@@ -9,6 +9,9 @@
 #include "geometry_msgs/Accel.h"
 #include "geometry_msgs/TransformStamped.h"
 #include "hector_uav_msgs/EnableMotors.h"
+#include "hector_uav_msgs/AttitudeCommand.h"
+#include "hector_uav_msgs/YawrateCommand.h"
+#include "hector_uav_msgs/ThrustCommand.h"
 #include "std_msgs/Header.h"
 #include "ros/ros.h"
 #include <boost/thread/mutex.hpp>
@@ -202,7 +205,9 @@ namespace hector_quadrotor_controller
 
   public:
 
-    void updateAndEstimate(const ros::Time &time, const geometry_msgs::Pose &pose, geometry_msgs::Twist &twist, geometry_msgs::Accel &accel){
+    void updateAndEstimate(const ros::Time &time, const geometry_msgs::Pose &pose, geometry_msgs::Twist &twist,
+                           geometry_msgs::Accel &accel)
+    {
 
       if (last_pose_)
       {
@@ -255,14 +260,20 @@ namespace hector_quadrotor_controller
     geometry_msgs::TwistPtr last_twist_;
     ros::Time last_time_;
 
-    double differenceWithWraparound(double angle, double last_angle){
+    double differenceWithWraparound(double angle, double last_angle)
+    {
 
       double diff = angle - last_angle;
-      if(diff > M_PI){
+      if (diff > M_PI)
+      {
         return diff - 2 * M_PI;
-      }else if(diff < -M_PI){
+      }
+      else if (diff < -M_PI)
+      {
         return diff + 2 * M_PI;
-      }else{
+      }
+      else
+      {
         return diff;
       }
 
@@ -388,6 +399,7 @@ namespace hector_quadrotor_controller
     }
   };
 
+  bool getMassAndInertia(const ros::NodeHandle &nh, double &mass, double inertia[3]);
 
 //  template<typename T, typename Msg>
 //  class ABTestHelper

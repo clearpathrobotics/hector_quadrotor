@@ -36,109 +36,167 @@
 #include <map>
 #include <list>
 
-namespace hector_quadrotor_controller {
-
-using namespace hardware_interface;
-
-class QuadrotorInterface : public HardwareInterface
+namespace hector_quadrotor_controller
 {
-public:
-  QuadrotorInterface();
-  virtual ~QuadrotorInterface();
 
-  virtual PoseHandlePtr getPose()                 { return PoseHandlePtr(); }
-  virtual TwistHandlePtr getTwist()               { return TwistHandlePtr(); }
-  virtual AccelerationHandlePtr getAcceleration() { return AccelerationHandlePtr(); }
-  virtual ImuHandlePtr getSensorImu()             { return ImuHandlePtr(); }
-  virtual MotorStatusHandlePtr getMotorStatus()   { return MotorStatusHandlePtr(); }
+  using namespace hardware_interface;
 
-
-  // TODO make non-virtual
-  virtual bool getMassAndInertia(double &mass, double inertia[3]) { return false; }
-
-  template <typename HandleType> boost::shared_ptr<HandleType> getHandle()
+  class QuadrotorInterface : public HardwareInterface
   {
-    return boost::shared_ptr<HandleType>(new HandleType(this));
-  }
+  public:
+    QuadrotorInterface();
 
-  template <typename HandleType> boost::shared_ptr<HandleType> addInput(const std::string& name)
-  {
-    boost::shared_ptr<HandleType> input = getInput<HandleType>(name);
-    if (input) return input;
+    virtual ~QuadrotorInterface();
 
-    // create new input handle
-    input.reset(new HandleType(this, name));
-    inputs_[name] = input;
-
-    // connect to output of same name
-    if (outputs_.count(name)) {
-      boost::shared_ptr<HandleType> output = boost::dynamic_pointer_cast<HandleType>(outputs_.at(name));
-      output->connectTo(*input);
+    // TODO template
+    void registerPose(geometry_msgs::Pose *pose){
+      pose_ = PoseHandlePtr(new PoseHandle(this, pose));
     }
 
-    return input;
-  }
-
-  template <typename HandleType> boost::shared_ptr<HandleType> addOutput(const std::string& name)
-  {
-    boost::shared_ptr<HandleType> output = getOutput<HandleType>(name);
-    if (output) return output;
-
-    // create new output handle
-    output.reset(new HandleType(this, name));
-    outputs_[name] = output;
-    *output = output->ownData(new typename HandleType::ValueType());
-
-    //claim resource
-    claim(name);
-
-    // connect to output of same name
-    if (inputs_.count(name)) {
-      boost::shared_ptr<HandleType> input = boost::dynamic_pointer_cast<HandleType>(inputs_.at(name));
-      output->connectTo(*input);
+    void registerTwist(geometry_msgs::Twist *twist){
+      twist_ = TwistHandlePtr(new TwistHandle(this, twist));
     }
 
-    return output;
-  }
+    void registerAccel(geometry_msgs::Accel *accel){
+      accel_ = AccelerationHandlePtr(new AccelerationHandle(this, accel));
+    }
+    void registerSensorImu(sensor_msgs::Imu *imu){
+      imu_ = ImuHandlePtr(new ImuHandle(this, imu));
+    }
 
-  template <typename HandleType> boost::shared_ptr<HandleType> getOutput(const std::string& name) const
-  {
-    if (!outputs_.count(name)) return boost::shared_ptr<HandleType>();
-    return boost::static_pointer_cast<HandleType>(outputs_.at(name));
-  }
+    void registerMotorStatus(hector_uav_msgs::MotorStatus *motor_status){
+      motor_status_ = MotorStatusHandlePtr(new MotorStatusHandle(this, motor_status));
+    }
 
-  template <typename HandleType> boost::shared_ptr<HandleType> getInput(const std::string& name) const
-  {
-    if (!inputs_.count(name)) return boost::shared_ptr<HandleType>();
-    return boost::static_pointer_cast<HandleType>(inputs_.at(name));
-  }
+    PoseHandlePtr getPose()
+    {
+      return pose_;
+    }
 
-  template <typename HandleType> typename HandleType::ValueType const* getCommand(const std::string& name) const
-  {
-    boost::shared_ptr<HandleType> output = getOutput<HandleType>(name);
-    if (!output || !output->connected()) return 0;
-    return &(output->command());
-  }
+    TwistHandlePtr getTwist()
+    {
+      return twist_;
+    }
 
-  virtual const Pose *getPoseCommand() const;
-  virtual const Twist *getTwistCommand() const;
-  virtual const Wrench *getWrenchCommand() const;
-  virtual const MotorCommand *getMotorCommand() const;
+    AccelerationHandlePtr getAccel()
+    {
+      return accel_;
+    }
 
-  bool enabled(const CommandHandle *handle) const;
-  bool start(const CommandHandle *handle);
-  void stop(const CommandHandle *handle);
+    ImuHandlePtr getSensorImu()
+    {
+      return imu_;
+    }
 
-  void disconnect(const CommandHandle *handle);
+    MotorStatusHandlePtr getMotorStatus()
+    {
+      return motor_status_;
+    }
 
-private:
+    PoseHandlePtr pose_;
+    TwistHandlePtr twist_;
+    AccelerationHandlePtr accel_;
+    ImuHandlePtr imu_;
+    MotorStatusHandlePtr motor_status_;
+
+    template<typename HandleType>
+    boost::shared_ptr<HandleType> getHandle()
+    {
+      return boost::shared_ptr<HandleType>(new HandleType(this));
+    }
+
+    template<typename HandleType>
+    boost::shared_ptr<HandleType> addInput(const std::string &name)
+    {
+      boost::shared_ptr<HandleType> input = getInput<HandleType>(name);
+      if (input)
+      { return input; }
+
+      // create new input handle
+      input.reset(new HandleType(this, name));
+      inputs_[name] = input;
+
+      // connect to output of same name
+      if (outputs_.count(name))
+      {
+        boost::shared_ptr<HandleType> output = boost::dynamic_pointer_cast<HandleType>(outputs_.at(name));
+        output->connectTo(*input);
+      }
+
+      return input;
+    }
+
+    template<typename HandleType>
+    boost::shared_ptr<HandleType> addOutput(const std::string &name)
+    {
+      boost::shared_ptr<HandleType> output = getOutput<HandleType>(name);
+      if (output)
+      { return output; }
+
+      // create new output handle
+      output.reset(new HandleType(this, name));
+      outputs_[name] = output;
+      *output = output->ownData(new typename HandleType::ValueType());
+
+      //claim resource
+      claim(name);
+
+      // connect to output of same name
+      if (inputs_.count(name))
+      {
+        boost::shared_ptr<HandleType> input = boost::dynamic_pointer_cast<HandleType>(inputs_.at(name));
+        output->connectTo(*input);
+      }
+
+      return output;
+    }
+
+    template<typename HandleType>
+    boost::shared_ptr<HandleType> getOutput(const std::string &name) const
+    {
+      if (!outputs_.count(name))
+      { return boost::shared_ptr<HandleType>(); }
+      return boost::static_pointer_cast<HandleType>(outputs_.at(name));
+    }
+
+    template<typename HandleType>
+    boost::shared_ptr<HandleType> getInput(const std::string &name) const
+    {
+      if (!inputs_.count(name))
+      { return boost::shared_ptr<HandleType>(); }
+      return boost::static_pointer_cast<HandleType>(inputs_.at(name));
+    }
+
+    template<typename HandleType>
+    typename HandleType::ValueType const *getCommand(const std::string &name) const
+    {
+      boost::shared_ptr<HandleType> output = getOutput<HandleType>(name);
+      if (!output || !output->connected())
+      { return 0; }
+      return &(output->command());
+    }
+
+    const Pose *getPoseCommand() const;
+    const Twist *getTwistCommand() const;
+    const Wrench *getWrenchCommand() const;
+    const MotorCommand *getMotorCommand() const;
+
+    bool enabled(const CommandHandle *handle) const;
+
+    bool start(const CommandHandle *handle);
+
+    void stop(const CommandHandle *handle);
+
+    void disconnect(const CommandHandle *handle);
+
+  private:
 //  typedef std::list< CommandHandlePtr > HandleList;
 //  std::map<const std::type_info *, HandleList> inputs_;
 //  std::map<const std::type_info *, HandleList> outputs_;
-  std::map<std::string, CommandHandlePtr> inputs_;
-  std::map<std::string, CommandHandlePtr> outputs_;
-  std::map<std::string, const CommandHandle *> enabled_;
-};
+    std::map<std::string, CommandHandlePtr> inputs_;
+    std::map<std::string, CommandHandlePtr> outputs_;
+    std::map<std::string, const CommandHandle *> enabled_;
+  };
 
 } // namespace hector_quadrotor_controller
 

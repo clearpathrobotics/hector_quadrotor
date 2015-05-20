@@ -35,9 +35,14 @@ namespace hector_quadrotor_controller_gazebo
 
   QuadrotorHardwareSim::QuadrotorHardwareSim()
   {
-    this->registerInterface(static_cast<QuadrotorInterface *>(this));
+    this->registerInterface(&interface_);
+    interface_.registerAccel(&acceleration_);
+    interface_.registerPose(&pose_);
+    interface_.registerMotorStatus(&motor_status_);
+    interface_.registerSensorImu(&imu_);
+    interface_.registerTwist(&twist_);
 
-    accel_input_ = addInput<AccelCommandHandle>("accel");
+    accel_input_ = interface_.addInput<AccelCommandHandle>("accel");
   }
 
   QuadrotorHardwareSim::~QuadrotorHardwareSim()
@@ -104,9 +109,12 @@ namespace hector_quadrotor_controller_gazebo
 
     wrench_limiter_ = boost::make_shared<WrenchLimiter>(limits_nh, "wrench");
 
-    getMassAndInertia(mass_, inertia_);
+    getMassAndInertia(model_nh, mass_, inertia_);
 
     wrench_pub_ = model_nh.advertise<geometry_msgs::WrenchStamped>("command/wrench", 1);
+
+    // TODO add estop
+//    estop_sub_ = model_nh.subscribe("estop", 1, )
 
 //    ab_x_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_x");
 //    ab_y_ = boost::make_shared<ABTestHelper<double, std_msgs::Float64> >(model_nh, "ab_y");
@@ -118,17 +126,17 @@ namespace hector_quadrotor_controller_gazebo
     return true;
   }
 
-  bool QuadrotorHardwareSim::getMassAndInertia(double &mass, double inertia[3])
-  {
-    if (!link_)
-    { return false; }
-    mass = link_->GetInertial()->GetMass();
-    gazebo::math::Vector3 Inertia = link_->GetInertial()->GetPrincipalMoments();
-    inertia[0] = Inertia.x;
-    inertia[1] = Inertia.y;
-    inertia[2] = Inertia.z;
-    return true;
-  }
+//  bool QuadrotorHardwareSim::getMassAndInertia(double &mass, double inertia[3])
+//  {
+//    if (!link_)
+//    { return false; }
+//    mass = link_->GetInertial()->GetMass();
+//    gazebo::math::Vector3 Inertia = link_->GetInertial()->GetPrincipalMoments();
+//    inertia[0] = Inertia.x;
+//    inertia[1] = Inertia.y;
+//    inertia[2] = Inertia.z;
+//    return true;
+//  }
 
   void QuadrotorHardwareSim::readSim(ros::Time time, ros::Duration period)
   {

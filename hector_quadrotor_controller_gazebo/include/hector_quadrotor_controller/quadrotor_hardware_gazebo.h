@@ -49,34 +49,13 @@ namespace hector_quadrotor_controller_gazebo
   using namespace hardware_interface;
   using namespace gazebo_ros_control;
 
-  class QuadrotorHardwareSim : public RobotHWSim, public QuadrotorInterface
+  class QuadrotorHardwareSim : public RobotHWSim
   {
   public:
     QuadrotorHardwareSim();
 
     virtual ~QuadrotorHardwareSim();
 
-    virtual const ros::Time &getTimestamp()
-    { return header_.stamp; }
-
-    virtual PoseHandlePtr getPose()
-    { return PoseHandlePtr(new PoseHandle(this, &pose_)); }
-
-    virtual TwistHandlePtr getTwist()
-    { return TwistHandlePtr(new TwistHandle(this, &twist_)); }
-
-    virtual AccelerationHandlePtr getAcceleration()
-    { return AccelerationHandlePtr(new AccelerationHandle(this, &acceleration_)); }
-
-    virtual ImuHandlePtr getSensorImu()
-    { return ImuHandlePtr(new ImuHandle(this, &imu_)); }
-
-    virtual MotorStatusHandlePtr getMotorStatus()
-    { return MotorStatusHandlePtr(new MotorStatusHandle(this, &motor_status_)); }
-
-    virtual bool getMassAndInertia(double &mass, double inertia[3]);
-
-    // TODO add to quadrotor_interface
     bool enableMotors(bool enabled);
 
     virtual bool initSim(
@@ -102,6 +81,8 @@ namespace hector_quadrotor_controller_gazebo
     sensor_msgs::Imu imu_;
     hector_uav_msgs::MotorStatus motor_status_;
 
+    QuadrotorInterface interface_;
+
     AccelCommandHandlePtr accel_input_;
 
     boost::shared_ptr<hector_quadrotor_controller::WrenchLimiter> wrench_limiter_;
@@ -119,6 +100,7 @@ namespace hector_quadrotor_controller_gazebo
     boost::shared_ptr<hector_quadrotor_controller::EnableMotorsServiceHelper> motor_status_service_helper_;
 
     ros::Publisher wrench_pub_, motor_status_pub_;
+    ros::Subscriber estop_sub_;
 
     PoseFilterHelper filter_;
     PoseDifferentiatorHelper diff_;
