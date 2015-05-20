@@ -8,7 +8,6 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Accel.h"
 #include "geometry_msgs/TransformStamped.h"
-#include "hector_uav_msgs/EnableMotors.h"
 #include "hector_uav_msgs/AttitudeCommand.h"
 #include "hector_uav_msgs/YawrateCommand.h"
 #include "hector_uav_msgs/ThrustCommand.h"
@@ -40,27 +39,6 @@ namespace hector_quadrotor_controller
     void imuCallback(const sensor_msgs::ImuConstPtr &imu)
     {
       imu_ = *imu;
-    }
-
-  };
-
-  class EnableMotorsServiceHelper
-  {
-  public:
-    EnableMotorsServiceHelper(ros::NodeHandle nh, boost::function<bool(bool)> enable_motors)
-        : enable_motors_(enable_motors)
-    {
-      motor_status_srv_ = nh.advertiseService("enable_motors", &EnableMotorsServiceHelper::enableMotorsCb, this);
-    }
-
-  private:
-    ros::ServiceServer motor_status_srv_;
-    boost::function<bool(bool)> enable_motors_;
-
-    bool enableMotorsCb(hector_uav_msgs::EnableMotors::Request &req, hector_uav_msgs::EnableMotors::Response &res)
-    {
-      res.success = enable_motors_(req.enable);
-      return true;
     }
 
   };

@@ -36,6 +36,7 @@
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <hector_uav_msgs/MotorStatus.h>
+#include "hector_uav_msgs/EnableMotors.h"
 
 #include <ros/node_handle.h>
 #include <hector_quadrotor_controller/limiters.h>
@@ -56,8 +57,6 @@ namespace hector_quadrotor_controller_gazebo
 
     virtual ~QuadrotorHardwareSim();
 
-    bool enableMotors(bool enabled);
-
     virtual bool initSim(
         const std::string &robot_namespace,
         ros::NodeHandle model_nh,
@@ -68,6 +67,8 @@ namespace hector_quadrotor_controller_gazebo
     virtual void readSim(ros::Time time, ros::Duration period);
 
     virtual void writeSim(ros::Time time, ros::Duration period);
+
+    bool enableMotorsCb(hector_uav_msgs::EnableMotors::Request &req, hector_uav_msgs::EnableMotors::Response &res);
 
   private:
 
@@ -97,10 +98,10 @@ namespace hector_quadrotor_controller_gazebo
 
     boost::shared_ptr<hector_quadrotor_controller::ImuSubscriberHelper> imu_sub_helper_;
     boost::shared_ptr<hector_quadrotor_controller::OdomSubscriberHelper> odom_sub_helper_;
-    boost::shared_ptr<hector_quadrotor_controller::EnableMotorsServiceHelper> motor_status_service_helper_;
 
     ros::Publisher wrench_pub_, motor_status_pub_;
     ros::Subscriber estop_sub_;
+    ros::ServiceServer motor_status_srv_;
 
     PoseFilterHelper filter_;
     PoseDifferentiatorHelper diff_;

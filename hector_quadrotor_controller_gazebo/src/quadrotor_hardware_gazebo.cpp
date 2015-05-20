@@ -103,8 +103,8 @@ namespace hector_quadrotor_controller_gazebo
     motor_status_.on = true;
     motor_status_.header.frame_id = base_link_frame_;
     motor_status_pub_ = model_nh.advertise<hector_uav_msgs::MotorStatus>("motor_status", 10);
-    motor_status_service_helper_ = boost::make_shared<EnableMotorsServiceHelper>(model_nh, boost::bind(
-        &QuadrotorHardwareSim::enableMotors, this, _1));
+
+    motor_status_srv_ = model_nh.advertiseService("enable_motors", &QuadrotorHardwareSim::enableMotorsCb, this);
 
 
     wrench_limiter_ = boost::make_shared<WrenchLimiter>(limits_nh, "wrench");
@@ -242,11 +242,13 @@ namespace hector_quadrotor_controller_gazebo
     }
   }
 
-  bool QuadrotorHardwareSim::enableMotors(bool enabled)
+  bool QuadrotorHardwareSim::enableMotorsCb(hector_uav_msgs::EnableMotors::Request &req, hector_uav_msgs::EnableMotors::Response &res)
   {
-    motor_status_.running = enabled;
+    motor_status_.running = req.enable;
+    res.success = true;
     return true;
   }
+
 } // namespace hector_quadrotor_controller_gazebo
 
 #include <pluginlib/class_list_macros.h>
