@@ -42,7 +42,6 @@
 #include <hector_quadrotor_controller/limiters.h>
 #include <std_msgs/Float64.h>
 
-
 namespace hector_quadrotor_controller_gazebo
 {
 
@@ -72,6 +71,8 @@ namespace hector_quadrotor_controller_gazebo
 
   private:
 
+    bool enableMotors(bool enable);
+
     double mass_;
     double inertia_[3];
 
@@ -100,7 +101,6 @@ namespace hector_quadrotor_controller_gazebo
     boost::shared_ptr<hector_quadrotor_controller::OdomSubscriberHelper> odom_sub_helper_;
 
     ros::Publisher wrench_pub_, motor_status_pub_;
-    ros::Subscriber estop_sub_;
     ros::ServiceServer motor_status_srv_;
 
     PoseFilterHelper filter_;
