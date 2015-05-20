@@ -6,6 +6,7 @@
 #include "geometry_msgs/Wrench.h"
 #include "geometry_msgs/Vector3.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Point.h"
 #include "hector_uav_msgs/AttitudeCommand.h"
 #include "hector_uav_msgs/ThrustCommand.h"
 #include "hector_uav_msgs/YawrateCommand.h"
@@ -24,7 +25,7 @@ namespace hector_quadrotor_controller
     {
       nh.param<T>(field + "/max", max_, std::numeric_limits<T>::max());
       nh.param<T>(field + "/min", min_, -max_);
-      ROS_DEBUG_STREAM("nh " << nh.getNamespace() + "/" + field << " inited " << field << " with min " << min_ << " and max " << max_);
+      ROS_INFO_STREAM("nh " << nh.getNamespace() + "/" + field << " initialized " << field << " with min " << min_ << " and max " << max_);
     }
 
     T limit(const T &value)
@@ -37,6 +38,27 @@ namespace hector_quadrotor_controller
     };
     T min_, max_;
 
+  };
+
+  class PointLimiter
+  {
+  public:
+    PointLimiter(ros::NodeHandle nh, std::string field)
+        : nh_(ros::NodeHandle(nh, field)), x_(nh_, "x"), y_(nh_, "y"), z_(nh_, "z")
+    {
+    }
+
+    Point limit(const Point &input)
+    {
+      Point output;
+      output.x = x_.limit(input.x);
+      output.y = y_.limit(input.y);
+      output.z = z_.limit(input.z);
+      return output;
+    }
+
+    ros::NodeHandle nh_;
+    FieldLimiter<double> x_, y_, z_;
   };
 
   class Vector3Limiter

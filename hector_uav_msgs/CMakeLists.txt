@@ -56,6 +56,8 @@ add_action_files(
     action
   FILES
     PoseCommand.action
+    Landing.action
+    Takeoff.action
 )
 
 ## Generate added messages and services with any dependencies listed here

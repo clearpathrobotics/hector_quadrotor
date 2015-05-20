@@ -8,6 +8,7 @@
 #include "geometry_msgs/Twist.h"
 #include "geometry_msgs/Accel.h"
 #include "geometry_msgs/TransformStamped.h"
+
 #include "hector_uav_msgs/AttitudeCommand.h"
 #include "hector_uav_msgs/YawrateCommand.h"
 #include "hector_uav_msgs/ThrustCommand.h"
@@ -379,6 +380,9 @@ namespace hector_quadrotor_controller
 
   bool getMassAndInertia(const ros::NodeHandle &nh, double &mass, double inertia[3]);
 
+
+  bool poseWithinTolerance(const geometry_msgs::Pose &pose_current, const geometry_msgs::Pose &pose_target,
+                           const double dist_tolerance, const double yaw_tolerance);
 //  template<typename T, typename Msg>
 //  class ABTestHelper
 //  {

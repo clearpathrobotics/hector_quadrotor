@@ -42,4 +42,26 @@ namespace hector_quadrotor_controller
     return true;
   }
 
+  bool poseWithinTolerance(const geometry_msgs::Pose &pose_current, const geometry_msgs::Pose &pose_target,
+                           const double dist_tolerance, const double yaw_tolerance)
+  {
+    double yaw_current, yaw_target;
+    tf2::Quaternion q;
+    double temp;
+    tf2::fromMsg(pose_current.orientation, q);
+    tf2::Matrix3x3(q).getRPY(temp, temp, yaw_current);
+    tf2::fromMsg(pose_target.orientation, q);
+    tf2::Matrix3x3(q).getRPY(temp, temp, yaw_target);
+    if (yaw_tolerance > 0.0 && std::abs(yaw_current - yaw_target) > yaw_tolerance)
+    { return false; }
+
+    tf2::Vector3 v_current(pose_current.position.x, pose_current.position.y, pose_current.position.z);
+    tf2::Vector3 v_target(pose_target.position.x, pose_target.position.y, pose_target.position.z);
+    if (dist_tolerance > 0.0 && (v_current - v_target).length() > dist_tolerance)
+    { return false; }
+
+    return true;
+
+  }
+
 }

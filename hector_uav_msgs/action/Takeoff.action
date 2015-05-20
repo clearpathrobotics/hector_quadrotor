@@ -1,0 +1,5 @@
+# Landing pose, pose.z is ignored
+geometry_msgs/PoseStamped landing_zone
+---
+---
+geometry_msgs/PoseStamped current_pose
