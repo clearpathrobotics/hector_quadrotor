@@ -55,7 +55,7 @@ namespace hector_quadrotor
 
     ros::NodeHandle node_handle_;
     ros::Subscriber joy_subscriber_;
-    ros::Publisher position_publisher_, velocity_publisher_, attitude_publisher_, yawrate_publisher_, thrust_publisher_;
+    ros::Publisher velocity_publisher_, attitude_publisher_, yawrate_publisher_, thrust_publisher_;
     ros::ServiceClient motor_enable_service_;
     boost::shared_ptr<LandingClient> landing_client_;
     boost::shared_ptr<TakeoffClient> takeoff_client_;
@@ -201,7 +201,7 @@ namespace hector_quadrotor
         position_.pose.orientation.y = 0;
         position_.pose.orientation.z = 0;
         position_.pose.orientation.w = 1;
-        position_publisher_ = robot_nh.advertise<geometry_msgs::PoseStamped>("command/pose", 10);
+
       }else
       {
         ROS_ERROR("Unsupported control mode");
@@ -298,9 +298,7 @@ namespace hector_quadrotor
       position_.pose.orientation = tf2::toMsg(q);
       if (getButton(joy, buttons_.go))
       {
-        //TODO action server start
-        position_publisher_.publish(position_);
-        enableMotors(true);
+        pose(position_);
       }
       if (getButton(joy, buttons_.interrupt))
       {
@@ -372,12 +370,12 @@ namespace hector_quadrotor
 
     bool takeoff(){
       hector_uav_msgs::TakeoffGoal goal;
-      takeoff_client_->sendGoal(goal);
+      takeoff_client_->sendGoalAndWait(goal, ros::Duration(10.0), ros::Duration(10.0));
     }
 
     bool land(){
       hector_uav_msgs::LandingGoal goal;
-      landing_client_->sendGoal(goal);
+      landing_client_->sendGoalAndWait(goal, ros::Duration(10.0), ros::Duration(10.0));
     }
 
     void pose(const geometry_msgs::PoseStamped &pose){
@@ -392,10 +390,6 @@ namespace hector_quadrotor
 
     void stop()
     {
-      if (position_publisher_.getNumSubscribers() > 0)
-      {
-        // TODO action server stop
-      }
       if (velocity_publisher_.getNumSubscribers() > 0)
       {
         velocity_publisher_.publish(geometry_msgs::TwistStamped());
