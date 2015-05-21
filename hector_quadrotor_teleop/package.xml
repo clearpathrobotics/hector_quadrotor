@@ -16,6 +16,7 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <!-- Dependencies needed to compile this package. -->
+  <build_depend>actionlib</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>hector_quadrotor_controller</build_depend>
   <build_depend>roscpp</build_depend>
@@ -23,6 +24,7 @@
   <build_depend>tf2_geometry_msgs</build_depend>
 
   <!-- Dependencies needed after this package is compiled. -->
+  <run_depend>actionlib</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>hector_quadrotor_controller</run_depend>
   <run_depend>joy</run_depend>

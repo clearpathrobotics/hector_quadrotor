@@ -34,9 +34,13 @@
 #include <hector_uav_msgs/YawrateCommand.h>
 #include <hector_uav_msgs/ThrustCommand.h>
 #include <hector_uav_msgs/AttitudeCommand.h>
+#include <hector_uav_msgs/TakeoffAction.h>
+#include <hector_uav_msgs/LandingAction.h>
+#include <hector_uav_msgs/PoseAction.h>
 #include <hector_quadrotor_controller/limiters.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <hector_uav_msgs/EnableMotors.h>
+#include <actionlib/client/simple_action_client.h>
 
 namespace hector_quadrotor
 {
@@ -44,10 +48,18 @@ namespace hector_quadrotor
   class Teleop
   {
   private:
+
+    typedef actionlib::SimpleActionClient<hector_uav_msgs::LandingAction> LandingClient;
+    typedef actionlib::SimpleActionClient<hector_uav_msgs::TakeoffAction> TakeoffClient;
+    typedef actionlib::SimpleActionClient<hector_uav_msgs::PoseAction> PoseClient;
+
     ros::NodeHandle node_handle_;
     ros::Subscriber joy_subscriber_;
     ros::Publisher position_publisher_, velocity_publisher_, attitude_publisher_, yawrate_publisher_, thrust_publisher_;
     ros::ServiceClient motor_enable_service_;
+    boost::shared_ptr<LandingClient> landing_client_;
+    boost::shared_ptr<TakeoffClient> takeoff_client_;
+    boost::shared_ptr<PoseClient> pose_client_;
 
     geometry_msgs::PoseStamped position_;
 
@@ -151,11 +163,11 @@ namespace hector_quadrotor
 
         joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1,
                                                                    boost::bind(&Teleop::joyAttitudeCallback, this, _1));
-        attitude_publisher_ = node_handle_.advertise<hector_uav_msgs::AttitudeCommand>(
-            robot_namespace_ + "command/attitude", 10);
-        yawrate_publisher_ = node_handle_.advertise<hector_uav_msgs::YawrateCommand>(
-            robot_namespace_ + "command/yawrate", 10);
-        thrust_publisher_ = node_handle_.advertise<hector_uav_msgs::ThrustCommand>(robot_namespace_ + "command/thrust",
+        attitude_publisher_ = robot_nh.advertise<hector_uav_msgs::AttitudeCommand>(
+            "command/attitude", 10);
+        yawrate_publisher_ = robot_nh.advertise<hector_uav_msgs::YawrateCommand>(
+            "command/yawrate", 10);
+        thrust_publisher_ = robot_nh.advertise<hector_uav_msgs::ThrustCommand>("command/thrust",
                                                                                    10);
       }
       else if (control_mode == "velocity")
@@ -168,7 +180,7 @@ namespace hector_quadrotor
 
         joy_subscriber_ = node_handle_.subscribe<sensor_msgs::Joy>("joy", 1,
                                                                    boost::bind(&Teleop::joyTwistCallback, this, _1));
-        velocity_publisher_ = node_handle_.advertise<geometry_msgs::TwistStamped>(robot_namespace_ + "command/twist",
+        velocity_publisher_ = robot_nh.advertise<geometry_msgs::TwistStamped>("command/twist",
                                                                                   10);
       }
       else if (control_mode == "position")
@@ -189,7 +201,7 @@ namespace hector_quadrotor
         position_.pose.orientation.y = 0;
         position_.pose.orientation.z = 0;
         position_.pose.orientation.w = 1;
-        position_publisher_ = node_handle_.advertise<geometry_msgs::PoseStamped>(robot_namespace_ + "command/pose", 10);
+        position_publisher_ = robot_nh.advertise<geometry_msgs::PoseStamped>("command/pose", 10);
       }else
       {
         ROS_ERROR("Unsupported control mode");
@@ -197,6 +209,10 @@ namespace hector_quadrotor
 
       motor_enable_service_ = node_handle_.serviceClient<hector_uav_msgs::EnableMotors>(
           robot_namespace_ + "enable_motors");
+      takeoff_client_ = boost::shared_ptr<TakeoffClient>(new TakeoffClient(robot_nh, "action/takeoff"));
+      landing_client_ = boost::shared_ptr<LandingClient>(new LandingClient(robot_nh, "action/landing"));
+      pose_client_ = boost::shared_ptr<PoseClient>(new PoseClient(robot_nh, "action/pose"));
+
     }
 
     ~Teleop()
@@ -288,11 +304,11 @@ namespace hector_quadrotor
       }
       if (getButton(joy, buttons_.interrupt))
       {
-        //TODO action server preempt
+        interrupt();
       }
       if (getButton(joy, buttons_.stop))
       {
-        enableMotors(false);
+        land();
       }
     }
 
@@ -352,6 +368,26 @@ namespace hector_quadrotor
       hector_uav_msgs::EnableMotors srv;
       srv.request.enable = enable;
       return motor_enable_service_.call(srv);
+    }
+
+    bool takeoff(){
+      hector_uav_msgs::TakeoffGoal goal;
+      takeoff_client_->sendGoal(goal);
+    }
+
+    bool land(){
+      hector_uav_msgs::LandingGoal goal;
+      landing_client_->sendGoal(goal);
+    }
+
+    void pose(const geometry_msgs::PoseStamped &pose){
+      hector_uav_msgs::PoseGoal goal;
+      goal.target_pose = pose;
+      pose_client_->sendGoal(goal);
+    }
+
+    void interrupt(){
+      pose_client_->cancelGoalsAtAndBeforeTime(ros::Time::now());
     }
 
     void stop()

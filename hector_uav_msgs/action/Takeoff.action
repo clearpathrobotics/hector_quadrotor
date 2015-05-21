@@ -1,5 +1,4 @@
-# Landing pose, pose.z is ignored
-geometry_msgs/PoseStamped landing_zone
+# Takeoff action, no input required
 ---
 ---
 geometry_msgs/PoseStamped current_pose

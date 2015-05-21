@@ -55,7 +55,7 @@ add_action_files(
   DIRECTORY
     action
   FILES
-    PoseCommand.action
+    Pose.action
     Landing.action
     Takeoff.action
 )

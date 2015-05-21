@@ -105,32 +105,23 @@ namespace hector_quadrotor_controller
   class PoseSubscriberHelper
   {
   public:
-    PoseSubscriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose, geometry_msgs::Twist &twist,
-                         geometry_msgs::Accel &acceleration, std_msgs::Header &header)
-        : pose_(pose), twist_(twist), acceleration_(acceleration), header_(header)
+    PoseSubscriberHelper(ros::NodeHandle nh, std::string topic)
     {
       pose_sub_ = nh.subscribe<geometry_msgs::PoseStamped>(topic, 1,
                                                            boost::bind(&PoseSubscriberHelper::poseCallback, this,
                                                                        _1));
     }
 
+    geometry_msgs::PoseStampedConstPtr get() const { return pose_; }
+
   private:
     ros::Subscriber pose_sub_;
 
-    geometry_msgs::Pose &pose_;
-    geometry_msgs::Twist &twist_;
-    geometry_msgs::Accel &acceleration_;
-    std_msgs::Header header_;
+    geometry_msgs::PoseStampedConstPtr pose_;
 
     void poseCallback(const geometry_msgs::PoseStampedConstPtr &pose)
     {
-
-      header_ = pose->header;
-      pose_ = pose->pose;
-
-      // TODO calculate twist and accel
-//      twist_ = odom->twist.twist;
-//      acceleration_ = ???
+      pose_ = pose;
     }
 
   };
@@ -267,18 +258,22 @@ namespace hector_quadrotor_controller
                          geometry_msgs::Twist &twist, geometry_msgs::Accel &accel, std_msgs::Header &header)
         : pose_(pose), twist_(twist), accel_(accel), header_(header)
     {
+      available_ = false;
       tf_sub_ = nh.subscribe<geometry_msgs::TransformStamped>(topic, 1,
                                                               boost::bind(&StateSubsriberHelper::tfCb,
                                                                           this, _1));
     }
 
+    bool isAvailable(){ return available_; }
+
   private:
     ros::Subscriber tf_sub_;
+    bool available_;
 
     geometry_msgs::Pose &pose_;
     geometry_msgs::Twist &twist_;
     geometry_msgs::Accel &accel_;
-    std_msgs::Header header_;
+    std_msgs::Header &header_;
 
     PoseFilterHelper filter_;
     PoseDifferentiatorHelper diff_;
@@ -294,6 +289,8 @@ namespace hector_quadrotor_controller
 
       pose_ = filter_.filterPoseMeasurement(pose_);
       diff_.updateAndEstimate(header_.stamp, pose_, twist_, accel_);
+
+      available_ = true;
     }
 
     // TODO shapeshifter to replace PoseSubscriber and OdomSubscriberHelper
