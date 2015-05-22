@@ -132,6 +132,7 @@ namespace hector_quadrotor_controller
     AttitudeCommand limit(const AttitudeCommand &input)
     {
       AttitudeCommand output;
+      output.header = input.header;
       output.roll = roll_.limit(input.roll);
       output.pitch = pitch_.limit(input.pitch);
       return output;
@@ -152,6 +153,7 @@ namespace hector_quadrotor_controller
     YawrateCommand limit(const YawrateCommand &input)
     {
       YawrateCommand output;
+      output.header = input.header;
       output.turnrate = turnrate_.limit(input.turnrate);
       return output;
     }
@@ -170,6 +172,7 @@ namespace hector_quadrotor_controller
     ThrustCommand limit(const ThrustCommand &input)
     {
       ThrustCommand output;
+      output.header = input.header;
       output.thrust = thrust_.limit(input.thrust);
       return output;
     }
