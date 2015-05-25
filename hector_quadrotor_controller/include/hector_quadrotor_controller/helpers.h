@@ -148,6 +148,8 @@ namespace hector_quadrotor_controller
 
     geometry_msgs::Pose filterPoseMeasurement(const geometry_msgs::Pose &pose)
     {
+
+//      ROS_INFO_STREAM(pose.position.x << "," << pose.position.y << "," << pose.position.z << "," << pose.orientation.x << "," << pose.orientation.y << "," << pose.orientation.z << "," << pose.orientation.w);
       geometry_msgs::Pose output;
 
       output.position.x = pose_filter_[PX].filter(pose.position.x);
@@ -380,32 +382,33 @@ namespace hector_quadrotor_controller
 
   bool poseWithinTolerance(const geometry_msgs::Pose &pose_current, const geometry_msgs::Pose &pose_target,
                            const double dist_tolerance, const double yaw_tolerance);
-//  template<typename T, typename Msg>
-//  class ABTestHelper
-//  {
-//
-//  public:
-//    ABTestHelper(ros::NodeHandle nh, std::string topic)
-//    {
-//      a_pub_ = nh.advertise<Msg>(topic + "/a", 1);
-//      b_pub_ = nh.advertise<Msg>(topic + "/b", 1);
-//    }
-//
-//    void publish(T a, T b)
-//    {
-//      a_msg.data = a;
-//      a_pub_.publish(a_msg);
-//
-//      b_msg.data = b;
-//      b_pub_.publish(b_msg);
-//    }
-//
-//  private:
-//    ros::Publisher a_pub_, b_pub_;
-//    Msg a_msg, b_msg;
-//
-//
-//  };
+
+  template<typename T, typename Msg>
+  class ABTestHelper
+  {
+
+  public:
+    ABTestHelper(ros::NodeHandle nh, std::string topic)
+    {
+      a_pub_ = nh.advertise<Msg>(topic + "/a", 1);
+      b_pub_ = nh.advertise<Msg>(topic + "/b", 1);
+    }
+
+    void publish(T a, T b)
+    {
+      a_msg.data = a;
+      a_pub_.publish(a_msg);
+
+      b_msg.data = b;
+      b_pub_.publish(b_msg);
+    }
+
+  private:
+    ros::Publisher a_pub_, b_pub_;
+    Msg a_msg, b_msg;
+
+
+  };
 
 }
 

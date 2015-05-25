@@ -49,11 +49,12 @@ namespace hector_quadrotor_controller
   private:
 
     // TODO allow clients to parametrize filter. coefficient array/vector?
+    // http://www-users.cs.york.ac.uk/~fisher/mkfilter/trad.html
     static const int zeros_ = 2;
     static const int poles_ = 2;
-    static const double gain_ = 1.482463775e+01;
-    static const double a_ = -0.4128015981;
-    static const double b_ = 1.1429805025;
+    static const double gain_ = 4.979245121e+01;
+    static const double a_ = -0.6413515381;
+    static const double b_ = 1.5610180758;
 
     boost::circular_buffer <double> input_buffer_, output_buffer_;
 
@@ -84,6 +85,36 @@ namespace hector_quadrotor_controller
       }
 
       return value;
+
+    }
+  };
+  template <size_t order>
+  class ParamFilter : public Filter
+  {
+
+  private:
+
+    boost::array<double, order + 1> a_, b_;
+    boost::circular_buffer <double> input_buffer_, output_buffer_;
+
+  public:
+
+    ParamFilter(boost::array<double, order + 1> a, boost::array<double, order + 1> b) : Filter(), input_buffer_(order + 1), output_buffer_(order + 1)
+    {
+      a_(a);
+      b_(b);
+      std::fill(output_buffer_.begin(), output_buffer_.end(), 0.0);
+    }
+
+    virtual ~ParamFilter()
+    {
+    }
+
+    double filter(double value)
+    {
+      input_buffer_.push_back(value);
+
+      // TODO
 
     }
   };
