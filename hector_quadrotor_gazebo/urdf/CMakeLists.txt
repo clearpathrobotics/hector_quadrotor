@@ -3,7 +3,7 @@ set(MODEL_PLUGINS)
 
 # configuration
 option(USE_EXTERNAL_CONTROLLER "Do not run the hector_quadrotor_controller_gazebo plugin." OFF)
-option(USE_PROPULSION_PLUGIN "Use a model of the quadrotor propulsion system" ON)
+option(USE_PROPULSION_PLUGIN "Use a model of the quadrotor propulsion system" OFF)
 option(USE_AERODYNAMICS_PLUGIN "Use a model of the quadrotor aerodynamics" ON)
 
 # sensor plugins

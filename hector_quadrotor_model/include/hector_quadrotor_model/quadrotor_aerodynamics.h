@@ -68,7 +68,7 @@ private:
 
   boost::mutex mutex_;
 
-  class DragModel;
+  struct DragModel;
   DragModel *drag_model_;
 };
 
