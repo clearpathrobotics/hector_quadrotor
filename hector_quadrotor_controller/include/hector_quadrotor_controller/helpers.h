@@ -44,8 +44,6 @@ namespace hector_quadrotor_controller
 
   };
 
-  // TODO switch to shapeshifter
-
   class OdomSubscriberHelper
   {
   public:
@@ -149,7 +147,6 @@ namespace hector_quadrotor_controller
     geometry_msgs::Pose filterPoseMeasurement(const geometry_msgs::Pose &pose)
     {
 
-//      ROS_INFO_STREAM(pose.position.x << "," << pose.position.y << "," << pose.position.z << "," << pose.orientation.x << "," << pose.orientation.y << "," << pose.orientation.z << "," << pose.orientation.w);
       geometry_msgs::Pose output;
 
       output.position.x = pose_filter_[PX].filter(pose.position.x);
@@ -294,35 +291,6 @@ namespace hector_quadrotor_controller
 
       available_ = true;
     }
-
-    // TODO shapeshifter to replace PoseSubscriber and OdomSubscriberHelper
-//    void stateCb(topic_tools::ShapeShifter const &input) {
-//      if (input.getDataType() == "nav_msgs/Odometry") {
-//        nav_msgs::Odometry::ConstPtr odom = input.instantiate<nav_msgs::Odometry>();
-//        odomCallback(*odom);
-//        return;
-//      }
-//
-//      if (input.getDataType() == "geometry_msgs/PoseStamped") {
-//        geometry_msgs::PoseStamped::ConstPtr pose = input.instantiate<geometry_msgs::PoseStamped>();
-//        poseCallback(*pose);
-//        return;
-//      }
-//
-//      if (input.getDataType() == "sensor_msgs/Imu") {
-//        sensor_msgs::Imu::ConstPtr imu = input.instantiate<sensor_msgs::Imu>();
-//        imuCallback(*imu);
-//        return;
-//      }
-//
-//      if (input.getDataType() == "geometry_msgs/TransformStamped") {
-//        geometry_msgs::TransformStamped::ConstPtr tf = input.instantiate<geometry_msgs::TransformStamped>();
-//        tfCallback(*tf);
-//        return;
-//      }
-//
-//      ROS_ERROR_THROTTLE(1.0, "message_to_tf received a %s message. Supported message types: nav_msgs/Odometry geometry_msgs/PoseStamped sensor_msgs/Imu", input.getDataType().c_str());
-//    }
 
   };
 
