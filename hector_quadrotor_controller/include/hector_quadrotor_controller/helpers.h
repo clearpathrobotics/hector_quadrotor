@@ -250,16 +250,16 @@ namespace hector_quadrotor_controller
 
   };
 
-  class StateSubsriberHelper
+  class StateSubscriberHelper
   {
   public:
-    StateSubsriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose,
+    StateSubscriberHelper(ros::NodeHandle nh, std::string topic, geometry_msgs::Pose &pose,
                          geometry_msgs::Twist &twist, geometry_msgs::Accel &accel, std_msgs::Header &header)
         : pose_(pose), twist_(twist), accel_(accel), header_(header)
     {
       available_ = false;
       tf_sub_ = nh.subscribe<geometry_msgs::TransformStamped>(topic, 1,
-                                                              boost::bind(&StateSubsriberHelper::tfCb,
+                                                              boost::bind(&StateSubscriberHelper::tfCb,
                                                                           this, _1));
     }
 
@@ -350,33 +350,6 @@ namespace hector_quadrotor_controller
 
   bool poseWithinTolerance(const geometry_msgs::Pose &pose_current, const geometry_msgs::Pose &pose_target,
                            const double dist_tolerance, const double yaw_tolerance);
-
-  template<typename T, typename Msg>
-  class ABTestHelper
-  {
-
-  public:
-    ABTestHelper(ros::NodeHandle nh, std::string topic)
-    {
-      a_pub_ = nh.advertise<Msg>(topic + "/a", 1);
-      b_pub_ = nh.advertise<Msg>(topic + "/b", 1);
-    }
-
-    void publish(T a, T b)
-    {
-      a_msg.data = a;
-      a_pub_.publish(a_msg);
-
-      b_msg.data = b;
-      b_pub_.publish(b_msg);
-    }
-
-  private:
-    ros::Publisher a_pub_, b_pub_;
-    Msg a_msg, b_msg;
-
-
-  };
 
 }
 
